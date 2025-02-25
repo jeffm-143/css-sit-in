@@ -1,0 +1,35 @@
+
+
+/* Mobile Optimization */
+@media (max-width: 500px) {
+    .containers {
+        width: 85%;
+        padding: 15px;
+    }
+    .form-title {
+        font-size: 18px;
+    }
+    .input-groups {
+        font-size: 12px;
+        padding: 8px;
+    }
+    .btn {
+        font-size: 14px;
+    }
+}
+
+
+.register {
+    font-size: 14px;
+
+}
+
+/* dashboard.css */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+}
+
