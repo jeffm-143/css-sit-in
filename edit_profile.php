@@ -8,7 +8,7 @@ if (!isset($_SESSION['username'])) {
 $host = 'localhost';  
 $username = 'root';  
 $password = '';      
-$dbname = 'user'; 
+$dbname = 'css_sit_in'; 
 
 $conn = new mysqli($host, $username, $password, $dbname);
 
@@ -17,7 +17,7 @@ if ($conn->connect_error) {
 }
 
 $user = $_SESSION['username'];
-$stmt = $conn->prepare("SELECT IDNO, lName, fName, MdName, Course, Yrlevel, email, address, profile_image FROM users WHERE username = ?");
+$stmt = $conn->prepare("SELECT ID_NUMBER, LASTNAME, FIRSTNAME, MIDDLENAME, COURSE, YEAR, EMAIL, ADDRESS, IMAGE FROM users WHERE USERNAME = ?");
 $stmt->bind_param("s", $user);
 $stmt->execute();
 $stmt->bind_result($IDNO, $lName, $fName, $MdName, $Course, $Yrlevel, $email, $address, $profile_image);
@@ -45,7 +45,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
 
-    $stmt = $conn->prepare("UPDATE users SET IDNO = ?, lName = ?, fName = ?, MdName = ?, Course = ?, Yrlevel = ?, email = ?, address = ?, profile_image = ? WHERE username = ?");
+    $stmt = $conn->prepare("UPDATE users SET ID_NUMBER = ?, LASTNAME = ?, FIRSTNAME = ?, MIDDLENAME = ?, COURSE = ?, YEAR = ?, EMAIL = ?, ADDRESS = ?, IMAGE = ? WHERE USERNAME = ?");
     $stmt->bind_param("ssssssssss", $IDNO, $lName, $fName, $MdName, $Course, $Yrlevel, $email, $address, $profile_image, $user);
 
     if ($stmt->execute()) {
@@ -75,7 +75,6 @@ $conn->close();
             display: flex;
             justify-content: center;
             height: 100vh;
-
         }
 
         .edit-profile-container {
@@ -87,7 +86,6 @@ $conn->close();
             text-align: center;
             height: 690px; /* Adjust height dynamically */
             margin-top: 10px; /* Push to the top */
-            
         }
 
         .edit-profile-container h2 {
@@ -113,8 +111,6 @@ $conn->close();
     </style>
 </head>
 <body>
-    
-
     <div class="edit-profile-container w3-card w3-animate-opacity">
         <h2>Edit Profile</h2>
         <form method="post" action="" enctype="multipart/form-data">
@@ -142,6 +138,5 @@ $conn->close();
             <button class="w3-button w3-blue w3-hover-green" type="submit">Update Profile</button>
         </form>
     </div>
-
 </body>
 </html>

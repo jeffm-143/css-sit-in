@@ -4,7 +4,7 @@ session_start();
 $host = 'localhost';  
 $username = 'root';  
 $password = '';      
-$dbname = 'user'; 
+$dbname = 'css_sit_in'; 
 
 $conn = new mysqli($host, $username, $password, $dbname);
 
@@ -16,7 +16,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = htmlspecialchars($_POST['Username']);
     $password = htmlspecialchars($_POST['Password']);
 
-    $stmt = $conn->prepare("SELECT password FROM users WHERE username = ?");
+    $stmt = $conn->prepare("SELECT PASSWORD FROM users WHERE USERNAME = ?");
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $stmt->store_result();
@@ -25,11 +25,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     if ($stmt->num_rows > 0 && password_verify($password, $hashedPassword)) {
         $_SESSION['username'] = $username;
-        echo "<script>alert('Login successful!'); window.location.href='dashboard.php';</script>";
-        exit();
+        echo "<script>
+            alert('Login Successful! Welcome!');
+            window.location.href = 'dashboard.php';
+        </script>";
     } else {
-        echo "<script>alert('Invalid username or password.');</script>";
+        echo "<script>
+            alert('Invalid username or password.');
+        </script>";
     }
+
     $stmt->close();
     $conn->close();
 }

@@ -1,9 +1,9 @@
-<?php
+<?php 
 
 $host = 'localhost';  
 $username = 'root';  
 $password = '';      
-$dbname = 'user'; 
+$dbname = 'css_sit_in'; 
 
 $conn = new mysqli($host, $username, $password, $dbname);
 
@@ -21,33 +21,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $Yrlevel = $_POST['Yrlevel'];
     $username = $_POST['username'];
     $password = $_POST['password'];
+    $email = $_POST['email'];
+    $address = $_POST['address'];
+    $session = $_POST['session'];
 
     $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-    $stmt = $conn->prepare("INSERT INTO users (IDNO, lName, fName, MdName, Course, Yrlevel, username, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("ssssssss", $IDNO, $lName, $fName, $MdName, $Course, $Yrlevel, $username, $hashedPassword);
+    $stmt = $conn->prepare("INSERT INTO users (ID_NUMBER, LASTNAME, FIRSTNAME, MIDDLENAME, COURSE, YEAR, USERNAME, PASSWORD, EMAIL, ADDRESS, SESSION) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("issssisssss", $IDNO, $lName, $fName, $MdName, $Course, $Yrlevel, $username, $hashedPassword, $email, $address, $session);
 
     if ($stmt->execute()) {
-        echo "<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>";
         echo "<script>
-            Swal.fire({
-                title: 'Good job!',
-                text: 'Registration successful!',
-                icon: 'success'
-            }).then(() => {
-                window.location.href = 'login.php';
-            });
+            alert('Registration successful!');
+            window.location.href = 'login.php';
         </script>";
         exit();
-    }
-     else {
-        echo "Error: " . $stmt->error;
+    } else {
+        echo "<script>
+            alert('Error: " . $stmt->error . "');
+        </script>";
     }
 
     $stmt->close();
     $conn->close();
 }
+
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -79,9 +80,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .w3-input, .w3-select {
             background: #f1f1f1;
             border: none;
-            padding: 10px;
+            padding: 3px;
             border-radius: 5px;
-            font-size: 14px;
+            font-size: 15px;
             width: 100%;
         }
 
@@ -94,7 +95,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             color: white;
             padding: 10px;
             border-radius: 8px;
-            font-size: 16=px;
+            font-size: 15px;
             cursor: pointer;
             transition: 0.3s;
         }
@@ -168,6 +169,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="input-group">
                 <i class="fas fa-lock"></i>
                 <input type="password" name="password" id="password" class="w3-input" placeholder="Password" required>
+            </div>
+            <div class="input-group">
+                <i class="fas fa-envelope"></i>
+                <input type="email" name="email" id="email" class="w3-input" placeholder="Email" required>
+            </div>
+            <div class="input-group">
+                <i class="fas fa-home"></i>
+                <input type="text" name="address" id="address" class="w3-input" placeholder="Address" required>
+            </div>
+            <div class="input-group">
+                <i class="fas fa-clock"></i>
+                <input type="text" name="session" id="session" class="w3-input" placeholder="Session" required>
             </div>
             <button type="submit" class="w3-button w3-block w3-hover-green">Register</button>
         </form>

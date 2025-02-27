@@ -8,7 +8,7 @@ if (!isset($_SESSION['username'])) {
 $host = 'localhost';  
 $username = 'root';  
 $password = '';      
-$dbname = 'user'; 
+$dbname = 'css_sit_in'; 
 
 $conn = new mysqli($host, $username, $password, $dbname);
 
@@ -17,13 +17,17 @@ if ($conn->connect_error) {
 }
 
 $user = $_SESSION['username'];
-$stmt = $conn->prepare("SELECT IDNO, lName, fName, MdName, Course, Yrlevel, email, address, profile_image FROM users WHERE username = ?");
+$stmt = $conn->prepare("SELECT ID_NUMBER, LASTNAME, FIRSTNAME, MIDDLENAME, COURSE, YEAR, EMAIL, ADDRESS, IMAGE, SESSION FROM users WHERE USERNAME = ?");
 $stmt->bind_param("s", $user);
 $stmt->execute();
-$stmt->bind_result($IDNO, $lName, $fName, $MdName, $Course, $Yrlevel, $email, $address, $profile_image);
+$stmt->bind_result($IDNO, $lName, $fName, $MdName, $Course, $Yrlevel, $email, $address, $profile_image, $session);
 $stmt->fetch();
 $stmt->close();
 $conn->close();
+
+if (empty($profile_image)) {
+    $profile_image = 'images/default_profile.png'; // Set default image
+}
 ?>
 
 <!DOCTYPE html>
@@ -76,7 +80,10 @@ $conn->close();
             border-radius: 50%;
             display: block;
             margin: auto;
+            object-fit: cover;
+            background-color: #ddd; 
         }
+
         .w3-card {
             margin-bottom: 20px; 
             padding: 20px; 
@@ -120,14 +127,14 @@ $conn->close();
             <div class="w3-third">
                 <div class="w3-card w3-white w3-round ">
                     <h3 class="w3-center">Student Information</h3>
-                    <img src="<?php echo htmlspecialchars($profile_image); ?>" alt="Profile" class="profile-img">
+                    <img src="<?php echo htmlspecialchars($profile_image); ?>" alt="" class="profile-img">
                     <p><strong>ID Number:</strong> <?php echo htmlspecialchars($IDNO); ?></p>
                     <p><strong>Name:</strong> <?php echo htmlspecialchars("$fName $MdName $lName"); ?></p>
                     <p><strong>Course:</strong> <?php echo htmlspecialchars($Course); ?></p>
                     <p><strong>Year:</strong> <?php echo htmlspecialchars($Yrlevel); ?></p>
                     <p><strong>Email:</strong> <?php echo htmlspecialchars($email); ?></p>
                     <p><strong>Address:</strong> <?php echo htmlspecialchars($address); ?></p>
-                    <p><strong>Session:</strong> 28</p>
+                    <p><strong>Session:</strong> <?php echo htmlspecialchars($session); ?></p>
                 </div>
             </div>
 
@@ -140,7 +147,7 @@ $conn->close();
                         <p>The College of Computer Studies will open the registration of students for the Sit-in privilege starting tomorrow.</p>
                         <hr>
                         <p><strong>CCS Admin | 2024-May-08</strong></p>
-                        <p>Important Announcement! We are excited to announce the launch of our new website! 🎉</p>
+                        <p>Important Announcement! We are excited to announce the launch of our new website! </p>
                     </div>
                 </div>
             </div>
