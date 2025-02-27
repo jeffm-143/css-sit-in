@@ -23,13 +23,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $password = $_POST['password'];
     $email = $_POST['email'];
     $address = $_POST['address'];
-    $session = $_POST['session'];
 
     $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-    $stmt = $conn->prepare("INSERT INTO users (ID_NUMBER, LASTNAME, FIRSTNAME, MIDDLENAME, COURSE, YEAR, USERNAME, PASSWORD, EMAIL, ADDRESS, SESSION) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("issssisssss", $IDNO, $lName, $fName, $MdName, $Course, $Yrlevel, $username, $hashedPassword, $email, $address, $session);
+    $stmt = $conn->prepare("INSERT INTO users (ID_NUMBER, LASTNAME, FIRSTNAME, MIDDLENAME, COURSE, YEAR, USERNAME, PASSWORD, EMAIL, ADDRESS) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("issssissss", $IDNO, $lName, $fName, $MdName, $Course, $Yrlevel, $username, $hashedPassword, $email, $address);
 
     if ($stmt->execute()) {
         echo "<script>
@@ -69,8 +68,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         .w3-container {
             width: 100%;
-            max-width: 500px; 
-            padding: 20px;
+            max-width: 400px; /* Reduced max-width */
+            padding: 15px; /* Reduced padding */
             background: white;
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
@@ -91,9 +90,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         .w3-button {
-            background:rgb(10, 47, 214);
+            background: #5461dd;
             color: white;
-            padding: 10px;
+            padding: 8px; /* Reduced padding */
             border-radius: 8px;
             font-size: 15px;
             cursor: pointer;
@@ -101,7 +100,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         .w3-button:hover {
-            background: #667eea;
+            background: #2b9ebb;
         }
 
         .input-group {
@@ -110,7 +109,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             background: #f1f1f1;
             padding: 3px;
             border-radius: 5px;
-            margin-bottom: 8px;
+            margin-bottom: 6px; /* Reduced margin */
         }
 
         .input-group i {
@@ -177,10 +176,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="input-group">
                 <i class="fas fa-home"></i>
                 <input type="text" name="address" id="address" class="w3-input" placeholder="Address" required>
-            </div>
-            <div class="input-group">
-                <i class="fas fa-clock"></i>
-                <input type="text" name="session" id="session" class="w3-input" placeholder="Session" required>
             </div>
             <button type="submit" class="w3-button w3-block w3-hover-green">Register</button>
         </form>

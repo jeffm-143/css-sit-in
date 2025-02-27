@@ -23,11 +23,11 @@ $stmt->execute();
 $stmt->bind_result($IDNO, $lName, $fName, $MdName, $Course, $Yrlevel, $email, $address, $profile_image, $session);
 $stmt->fetch();
 $stmt->close();
-$conn->close();
 
-if (empty($profile_image)) {
-    $profile_image = 'images/default_profile.png'; // Set default image
-}
+$default_image = "images/css.png";
+$profile_image = $profile_image ? $profile_image : $default_image;
+
+$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -40,6 +40,10 @@ if (empty($profile_image)) {
     <style>
         body {
             font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea, #50ac6b) ;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
         }
         .nav-bar {
             background-color: navy;
@@ -48,6 +52,7 @@ if (empty($profile_image)) {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
         .nav-bar h2 {
             margin: 0;
@@ -65,6 +70,10 @@ if (empty($profile_image)) {
             color: white;
             text-decoration: none;
             font-weight: bold;
+            transition: color 0.3s ease-in-out;
+        }
+        .nav-bar ul li a:hover {
+            color: yellow;
         }
         .logout {
             background: yellow;
@@ -73,6 +82,11 @@ if (empty($profile_image)) {
             text-decoration: none;
             font-weight: bold;
             border-radius: 5px;
+            transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
+        }
+        .logout:hover {
+            background: navy;
+            color: yellow;
         }
         .profile-img {
             width: 100px;
@@ -81,24 +95,43 @@ if (empty($profile_image)) {
             display: block;
             margin: auto;
             object-fit: cover;
-            background-color: #ddd; 
+            background-color: #ddd;
         }
-
         .w3-card {
-            margin-bottom: 20px; 
-            padding: 20px; 
+            margin-bottom: 20px;
+            padding: 20px;
+            transition: transform 0.3s ease-in-out;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .w3-card:hover {
+            transform: scale(1.05);
         }
         .student-info-card {
-            width: 80%; 
+            width: 80%;
             margin: auto;
         }
         .announcement-card, .rules-card {
-            margin-top: 20px; 
+            margin-top: 20px;
         }
         .w3-third {
-            padding: 0 15px; 
+            padding: 0 15px;
         }
-        
+        .w3-center {
+            text-align: center;
+        }
+        .w3-center h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .w3-container p {
+            margin: 10px 0;
+            color: #555;
+        }
+        .w3-container ul {
+            padding-left: 20px;
+            color: #555;
+        }
     </style>
 </head>
 <body>
@@ -109,8 +142,8 @@ if (empty($profile_image)) {
             <h2 style="margin-right: auto;">Dashboard</h2>
             <nav>
                 <ul style="margin: 0 auto;">
-                    <li><a href="#">Notification</a></li>
-                    <li><a href="index.php">Home</a></li>
+                    <li><a href="notification.php">Notification</a></li>
+                    <li><a href="dashboard.php">Home</a></li>
                     <li><a href="edit_profile.php">Edit Profile</a></li>
                     <li><a href="history.php">History</a></li>
                     <li><a href="reservation.php">Reservation</a></li>

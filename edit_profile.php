@@ -71,72 +71,79 @@ $conn->close();
     <style>
         body {
             font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea, #50ac6b);
-            display: flex;
-            justify-content: center;
+            background: linear-gradient(135deg, #667eea, #50ac6b) ;
+            margin: 0;
+            padding: 0;
             height: 100vh;
         }
-
-        .edit-profile-container {
-            background: white;
+        .nav-bar {
+            background-color: navy;
             padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.3);
-            width: 40%; /* Keep container compact */
-            text-align: center;
-            height: 690px; /* Adjust height dynamically */
-            margin-top: 10px; /* Push to the top */
-        }
-
-        .edit-profile-container h2 {
-            margin-bottom: 10px;
-            color: #333;
-        }
-        .w3-input, .w3-select {
-            margin-bottom: 15px;
-            border-radius: 5px;
-            width: 100%;
-        }
-        .w3-button {
-            width: 50%;
-            background: #5461dd;
             color: white;
-            font-size: 16px;
-            padding: 10px;
-            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-        .w3-button:hover {
-            background: #2b9ebb;
+        .nav-bar h2 {
+            margin: 0;
+        }
+        .nav-bar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+        }
+        .nav-bar ul li {
+            margin: 0 15px;
+        }
+        .nav-bar ul li a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.3s ease-in-out;
+        }
+        .nav-bar ul li a:hover {
+            color: yellow;
+        }
+        .logout {
+            background: yellow;
+            color: navy;
+            padding: 8px 12px;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 5px;
+            transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
+        }
+        .logout:hover {
+            background: navy;
+            color: yellow;
+        }
+        .w3-container ul {
+            padding-left: 20px;
+            color: #555;
         }
     </style>
 </head>
 <body>
-    <div class="edit-profile-container w3-card w3-animate-opacity">
-        <h2>Edit Profile</h2>
-        <form method="post" action="" enctype="multipart/form-data">
-            <img src="<?php echo htmlspecialchars($profile_image); ?>" alt="Profile Image" style="width: 60px; height: 60px; border-radius: 60%; margin-bottom: 5px;">
-            <input class="w3-input w3-border" type="file" name="profile_image">
-            <input class="w3-input w3-border" type="text" name="IDNO" value="<?php echo htmlspecialchars($IDNO); ?>" placeholder="ID Number" required>
-            <input class="w3-input w3-border" type="text" name="lName" value="<?php echo htmlspecialchars($lName); ?>" placeholder="Last Name" required>
-            <input class="w3-input w3-border" type="text" name="fName" value="<?php echo htmlspecialchars($fName); ?>" placeholder="First Name" required>
-            <input class="w3-input w3-border" type="text" name="MdName" value="<?php echo htmlspecialchars($MdName); ?>" placeholder="Middle Name" required>
-            <select class="w3-select w3-border" name="Course" required>
-                <option value="" disabled>Select Course</option>
-                <option value="Computer Science" <?php if ($Course == 'Computer Science') echo 'selected'; ?>>BSIT</option>
-                <option value="Engineering" <?php if ($Course == 'Engineering') echo 'selected'; ?>>BSED</option>
-                <option value="Business Administration" <?php if ($Course == 'Business Administration') echo 'selected'; ?>>Business Administration</option>
-            </select>
-            <select class="w3-select w3-border" name="Yrlevel" required>
-                <option value="" disabled>Select Year Level</option>
-                <option value="1" <?php if ($Yrlevel == '1') echo 'selected'; ?>>1st Year</option>
-                <option value="2" <?php if ($Yrlevel == '2') echo 'selected'; ?>>2nd Year</option>
-                <option value="3" <?php if ($Yrlevel == '3') echo 'selected'; ?>>3rd Year</option>
-                <option value="4" <?php if ($Yrlevel == '4') echo 'selected'; ?>>4th Year</option>
-            </select>
-            <input class="w3-input w3-border" type="email" name="email" value="<?php echo htmlspecialchars($email); ?>" placeholder="Email" required>
-            <input class="w3-input w3-border" type="text" name="address" value="<?php echo htmlspecialchars($address); ?>" placeholder="Address" required>
-            <button class="w3-button w3-blue w3-hover-green" type="submit">Update Profile</button>
-        </form>
-    </div>
+    <!-- Navigation -->
+    <header>
+        <div class="nav-bar w3-container">
+            <h2 style="margin-right: auto;">Dashboard</h2>
+            <nav>
+                <ul style="margin: 0 auto;">
+                    <li><a href="notification.php">Notification</a></li>
+                    <li><a href="dashboard.php">Home</a></li>
+                    <li><a href="edit_profile.php">Edit Profile</a></li>
+                    <li><a href="history.php">History</a></li>
+                    <li><a href="reservation.php">Reservation</a></li>
+                </ul>
+            </nav>
+            <a href="logout.php" class="logout" style="margin-left: auto;">Log out</a>
+        </div>
+    </header>
+
+
+    
 </body>
 </html>
