@@ -54,27 +54,32 @@ $conn->close();
             align-items: center;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-        .nav-bar h2 {
-            margin: 0;
-        }
+
         .nav-bar ul {
             list-style: none;
             padding: 0;
             margin: 0;
             display: flex;
+            justify-content: center; 
+            gap: 10px;
         }
         .nav-bar ul li {
-            margin: 0 15px;
+            display: inline-block;
         }
+
         .nav-bar ul li a {
             color: white;
             text-decoration: none;
             font-weight: bold;
+            padding: 10px 15px; 
+            display: block; 
             transition: color 0.3s ease-in-out;
         }
+
         .nav-bar ul li a:hover {
             color: yellow;
         }
+
         .logout {
             background: yellow;
             color: navy;
@@ -84,14 +89,16 @@ $conn->close();
             border-radius: 5px;
             transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
         }
+
         .logout:hover {
             background: navy;
             color: yellow;
         }
+
         .profile-img {
             width: 100px;
             height: 100px;
-            border-radius: 50%;
+            border-radius: 30%;
             display: block;
             margin: auto;
             object-fit: cover;
@@ -107,11 +114,7 @@ $conn->close();
         .w3-card:hover {
             transform: scale(1.05);
         }
-        .student-info-card {
-            width: 80%;
-            margin: auto;
-        }
-        .announcement-card, .rules-card {
+        .student-info-card, .announcement-card, .rules-card {
             margin-top: 20px;
         }
         .w3-third {
@@ -124,12 +127,9 @@ $conn->close();
             margin-bottom: 20px;
             color: #333;
         }
+        
         .w3-container p {
             margin: 10px 0;
-            color: #555;
-        }
-        .w3-container ul {
-            padding-left: 20px;
             color: #555;
         }
     </style>
@@ -141,24 +141,25 @@ $conn->close();
         <div class="nav-bar w3-container">
             <h2 style="margin-right: auto;">Dashboard</h2>
             <nav>
-                <ul style="margin: 0 auto;">
-                    <li><a href="notification.php">Notification</a></li>
+                <ul>
+                    <li><a href="#">Notification</a></li>
                     <li><a href="dashboard.php">Home</a></li>
                     <li><a href="edit_profile.php">Edit Profile</a></li>
                     <li><a href="history.php">History</a></li>
                     <li><a href="reservation.php">Reservation</a></li>
                 </ul>
             </nav>
-            <a href="logout.php" class="logout" style="margin-left: auto;">Log out</a>
+            <a href="logout.php" class="logout">Log out</a>
         </div>
     </header>
+
 
     <!-- Main Content -->
     <main class="w3-container w3-margin-top">
         <div class="w3-row-padding">
             <!-- Student Info -->
             <div class="w3-third">
-                <div class="w3-card w3-white w3-round ">
+                <div class="w3-card w3-white w3-round student-info-card">
                     <h3 class="w3-center">Student Information</h3>
                     <img src="<?php echo htmlspecialchars($profile_image); ?>" alt="" class="profile-img">
                     <p><strong>ID Number:</strong> <?php echo htmlspecialchars($IDNO); ?></p>

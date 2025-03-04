@@ -68,8 +68,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         .w3-container {
             width: 100%;
-            max-width: 400px; /* Reduced max-width */
-            padding: 15px; /* Reduced padding */
+            max-width: 500px; 
+            padding: 15px; 
             background: white;
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
@@ -79,8 +79,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .w3-input, .w3-select {
             background: #f1f1f1;
             border: none;
-            padding: 3px;
-            border-radius: 5px;
+            padding: 5px;
+
             font-size: 15px;
             width: 100%;
         }
@@ -92,7 +92,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .w3-button {
             background: #5461dd;
             color: white;
-            padding: 8px; /* Reduced padding */
+            padding: 8px;
             border-radius: 8px;
             font-size: 15px;
             cursor: pointer;
@@ -118,8 +118,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         .w3-center a {
-            color: #667eea;
+            color: #0066cc;
         }
+        
     </style>
 </head>
 <body>
@@ -142,13 +143,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <i class="fas fa-user"></i>
                 <input type="text" name="MdName" id="MdName" class="w3-input" placeholder="Middle Name" required>
             </div>
-            <div class="input-group">
+            <div class="input-group" style="justify-content: center;">
                 <i class="fas fa-graduation-cap"></i>
                 <select name="Course" id="Course" class="w3-select" required>
-                    <option value="" disabled selected>Select Course</option>
-                    <option value="Computer Science">BSIT</option>
-                    <option value="Engineering">BSED</option>
-                    <option value="Business Administration">Business Administration</option>
+                <option value="" disabled selected>Select Course</option>
+                <option value="BSIT">Bachelor of Science in Information Technology (BSIT)</option>
+                <option value="BSED">Bachelor of Secondary Education (BSED)</option>
+                <option value="BSBA">Bachelor of Science in Business Administration (BSBA)</option>
+                <option value="BSNursing">Bachelor of Science in Nursing (BSNursing)</option>
+                <option value="BSEducation">Bachelor of Science in Education (BSEducation)</option>
+                <option value="BSPsychology">Bachelor of Science in Psychology (BSPsychology)</option>
+                <option value="BSArchitecture">Bachelor of Science in Architecture (BSArchitecture)</option>
+                <option value="LLB">Bachelor of Laws (LLB)</option>
                 </select>
             </div>
             <div class="input-group">
@@ -177,7 +183,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <i class="fas fa-home"></i>
                 <input type="text" name="address" id="address" class="w3-input" placeholder="Address" required>
             </div>
-            <button type="submit" class="w3-button w3-block w3-hover-green">Register</button>
+            <button type="submit" class="w3-button w3-block w3-blue w3-hover-green">Register</button>
         </form>
         <p class="w3-center w3-padding-16 ">Already have an account? <a href="login.php">Login Here</a></p>
     </div>
