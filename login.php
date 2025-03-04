@@ -60,7 +60,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             padding: 30px;
             border-radius: 10px;
             box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.3);
-            width: 350px;
+            width: 400px;
             text-align: center;
         }
         .logo {

@@ -56,7 +56,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registration</title>
     <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script> <!-- Icons -->
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script> 
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <style>
         body {
             background: linear-gradient(135deg, #667eea, #50ac6b);
@@ -68,7 +69,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         .w3-container {
             width: 100%;
-            max-width: 500px; 
+            max-width: 400px; 
             padding: 15px; 
             background: white;
             border-radius: 10px;
@@ -127,25 +128,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <div class="w3-container w3-animate-opacity">
         <h1 class="w3-center">Create an Account</h1>
         <form method="post" action="">  
-            <div class="input-group">
-                <i class="fas fa-id-badge"></i>
-                <input type="text" name="IDNO" id="IDNO" class="w3-input" placeholder="ID Number" required>
-            </div>
-            <div class="input-group">
-                <i class="fas fa-user"></i>
-                <input type="text" name="lName" id="lName" class="w3-input" placeholder="Last Name" required>
-            </div>
-            <div class="input-group">
-                <i class="fas fa-user"></i>
-                <input type="text" name="fName" id="fName" class="w3-input" placeholder="First Name" required>
-            </div>
-            <div class="input-group">
-                <i class="fas fa-user"></i>
-                <input type="text" name="MdName" id="MdName" class="w3-input" placeholder="Middle Name" required>
-            </div>
-            <div class="input-group" style="justify-content: center;">
-                <i class="fas fa-graduation-cap"></i>
-                <select name="Course" id="Course" class="w3-select" required>
+        <div class="input-group" style="position: relative;">
+            <i class="fas fa-id-badge" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
+            <input type="number" name="IDNO" id="IDNO" class="w3-input" placeholder="ID Number" required style="padding-left: 30px;">
+        </div>
+
+        <div class="input-group" style="position: relative;">
+            <i class="fas fa-user" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
+            <input type="text" name="lName" id="lName" class="w3-input" placeholder="Last Name" required style="padding-left: 30px;">
+        </div>
+
+        <div class="input-group" style="position: relative;">
+            <i class="fas fa-user" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
+            <input type="text" name="fName" id="fName" class="w3-input" placeholder="First Name" required style="padding-left: 30px;">
+        </div>
+
+        <div class="input-group" style="position: relative;">
+            <i class="fas fa-user" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
+            <input type="text" name="MdName" id="MdName" class="w3-input" placeholder="Middle Name" required style="padding-left: 30px;">
+        </div>
+
+        <div class="input-group" style="position: relative; justify-content: center;">
+            <i class="fas fa-graduation-cap" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
+            <select name="Course" id="Course" class="w3-select" required style="padding-left: 30px;">
                 <option value="" disabled selected>Select Course</option>
                 <option value="BSIT">Bachelor of Science in Information Technology (BSIT)</option>
                 <option value="BSED">Bachelor of Secondary Education (BSED)</option>
@@ -155,34 +160,41 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <option value="BSPsychology">Bachelor of Science in Psychology (BSPsychology)</option>
                 <option value="BSArchitecture">Bachelor of Science in Architecture (BSArchitecture)</option>
                 <option value="LLB">Bachelor of Laws (LLB)</option>
-                </select>
-            </div>
-            <div class="input-group">
-                <i class="fas fa-layer-group"></i>
-                <select name="Yrlevel" id="Yrlevel" class="w3-select" required>
-                    <option value="" disabled selected>Select Year Level</option>
-                    <option value="1">1st Year</option>
-                    <option value="2">2nd Year</option>
-                    <option value="3">3rd Year</option>
-                    <option value="4">4th Year</option>
-                </select>
-            </div>
-            <div class="input-group">
-                <i class="fas fa-user-circle"></i>
-                <input type="text" name="username" id="username" class="w3-input" placeholder="Username" required>
-            </div>
-            <div class="input-group">
-                <i class="fas fa-lock"></i>
-                <input type="password" name="password" id="password" class="w3-input" placeholder="Password" required>
-            </div>
-            <div class="input-group">
-                <i class="fas fa-envelope"></i>
-                <input type="email" name="email" id="email" class="w3-input" placeholder="Email" required>
-            </div>
-            <div class="input-group">
-                <i class="fas fa-home"></i>
-                <input type="text" name="address" id="address" class="w3-input" placeholder="Address" required>
-            </div>
+            </select>
+        </div>
+
+        <div class="input-group" style="position: relative;">
+            <i class="fas fa-layer-group" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
+            <select name="Yrlevel" id="Yrlevel" class="w3-select" required style="padding-left: 30px;">
+                <option value="" disabled selected>Select Year Level</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+            </select>
+        </div>
+
+        <div class="input-group" style="position: relative;">
+            <i class="fas fa-user-circle" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
+            <input type="text" name="username" id="username" class="w3-input" placeholder="Username" required style="padding-left: 30px;">
+        </div>
+
+        <div class="input-group" style="position: relative;">
+            <i class="fas fa-lock" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
+            <input type="password" name="password" id="password" class="w3-input" placeholder="Password" required style="padding-left: 30px;">
+        </div>
+
+        <div class="input-group" style="position: relative;">
+            <i class="fas fa-envelope" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
+            <input type="email" name="email" id="email" class="w3-input" placeholder="Email" required style="padding-left: 30px;">
+        </div>
+
+        <div class="input-group" style="position: relative;">
+            <i class="fas fa-home" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
+            <input type="text" name="address" id="address" class="w3-input" placeholder="Address" required style="padding-left: 30px;">
+        </div>
+
+
             <button type="submit" class="w3-button w3-block w3-blue w3-hover-green">Register</button>
         </form>
         <p class="w3-center w3-padding-16 ">Already have an account? <a href="login.php">Login Here</a></p>

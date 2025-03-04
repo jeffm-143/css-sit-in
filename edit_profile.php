@@ -73,10 +73,10 @@ $conn->close();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Profile</title>
     <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <style>
         body {
             font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea, #50ac6b);
             margin: 0;
             padding: 0;
             height: 100%;
@@ -148,8 +148,8 @@ $conn->close();
             margin-bottom: 15px;
         }
         .profile-image-container img {
-            width: 100px;
-            height: 100px;
+            width: 150px;
+            height: 150px;
             border-radius: 50%;
             display: block;
             margin: auto;
@@ -189,6 +189,9 @@ $conn->close();
         .w3-button.cancel:hover {
             background: #d32f2f;
         }
+        .img {
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -210,50 +213,52 @@ $conn->close();
     </header>
 
     <div class="edit-profile-container w3-card w3-animate-opacity">
-        <h2>Edit Profile</h2>
+        <h2><strong>Edit Profile</strong></h2>
         <form method="post" action="" enctype="multipart/form-data">
             <div class="profile-image-container">
-                <img src="<?php echo htmlspecialchars($profile_image); ?>" alt="Profile Image">
-                <input class="w3-input w3-border" type="file" name="profile_image">
+                <label for="profile_image">
+                    <img class="img" src="<?php echo htmlspecialchars($profile_image); ?>" alt="Profile Image" id="profileImagePreview" style="cursor: pointer;">
+                </label>
+                <input class="w3-input w3-border" type="file" name="profile_image" id="profile_image" style="display: none;" onchange="previewImage(event)">
             </div>
 
             <div class="form-group">
-                <label>ID Number:</label>
-                <input class="w3-input w3-border" type="number" name="IDNO" value="<?php echo htmlspecialchars($IDNO); ?>" required>
+                <label><i class="fas fa-id-card"></i> ID Number:</label>
+                <input class="w3-input w3-border w3-light-grey" type="number" name="IDNO" value="<?php echo htmlspecialchars($IDNO); ?>" readonly>
             </div>
 
             <div class="form-group">
-                <label>Last Name:</label>
+                <label><i class="fas fa-user"></i> Last Name:</label>
                 <input class="w3-input w3-border" type="text" name="lName" value="<?php echo htmlspecialchars($lName); ?>" required>
             </div>
 
             <div class="form-group">
-                <label>First Name:</label>
+                <label><i class="fas fa-user"></i> First Name:</label>
                 <input class="w3-input w3-border" type="text" name="fName" value="<?php echo htmlspecialchars($fName); ?>" required>
             </div>
 
             <div class="form-group">
-                <label>Middle Name:</label>
+                <label><i class="fas fa-user"></i> Middle Name:</label>
                 <input class="w3-input w3-border" type="text" name="MdName" value="<?php echo htmlspecialchars($MdName); ?>" required>
             </div>
 
             <div class="form-group">
-                <label>Course:</label>
+                <label><i class="fas fa-graduation-cap"></i> Course:</label>
                 <select class="w3-select w3-border" name="Course" required>
-                <option value="" disabled>Select Course</option>
-                <option value="BSIT" <?php if ($Course == 'BSIT') echo 'selected'; ?>>Bachelor of Science in Information Technology (BSIT)</option>
-                <option value="BSED" <?php if ($Course == 'BSED') echo 'selected'; ?>>Bachelor of Secondary Education (BSED)</option>
-                <option value="BSBA" <?php if ($Course == 'BSBA') echo 'selected'; ?>>Bachelor of Science in Business Administration (BSBA)</option>
-                <option value="BSNursing" <?php if ($Course == 'BSNursing') echo 'selected'; ?>>Bachelor of Science in Nursing (BSNursing)</option>
-                <option value="BSEducation" <?php if ($Course == 'BSEducation') echo 'selected'; ?>>Bachelor of Science in Education (BSEducation)</option>
-                <option value="BSPsychology" <?php if ($Course == 'BSPsychology') echo 'selected'; ?>>Bachelor of Science in Psychology (BSPsychology)</option>
-                <option value="BSArchitecture" <?php if ($Course == 'BSArchitecture') echo 'selected'; ?>>Bachelor of Science in Architecture (BSArchitecture)</option>
-                <option value="LLB" <?php if ($Course == 'LLB') echo 'selected'; ?>>Bachelor of Laws (LLB)</option>
+                    <option value="" disabled>Select Course</option>
+                    <option value="BSIT" <?php if ($Course == 'BSIT') echo 'selected'; ?>>Bachelor of Science in Information Technology (BSIT)</option>
+                    <option value="BSED" <?php if ($Course == 'BSED') echo 'selected'; ?>>Bachelor of Secondary Education (BSED)</option>
+                    <option value="BSBA" <?php if ($Course == 'BSBA') echo 'selected'; ?>>Bachelor of Science in Business Administration (BSBA)</option>
+                    <option value="BSNursing" <?php if ($Course == 'BSNursing') echo 'selected'; ?>>Bachelor of Science in Nursing (BSNursing)</option>
+                    <option value="BSEducation" <?php if ($Course == 'BSEducation') echo 'selected'; ?>>Bachelor of Science in Education (BSEducation)</option>
+                    <option value="BSPsychology" <?php if ($Course == 'BSPsychology') echo 'selected'; ?>>Bachelor of Science in Psychology (BSPsychology)</option>
+                    <option value="BSArchitecture" <?php if ($Course == 'BSArchitecture') echo 'selected'; ?>>Bachelor of Science in Architecture (BSArchitecture)</option>
+                    <option value="LLB" <?php if ($Course == 'LLB') echo 'selected'; ?>>Bachelor of Laws (LLB)</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label>Year Level:</label>
+                <label><i class="fas fa-clock"></i> Year Level:</label>
                 <select class="w3-select w3-border" name="Yrlevel" required>
                     <option value="" disabled>Select Year Level</option>
                     <option value="1" <?php if ($Yrlevel == '1') echo 'selected'; ?>>1</option>
@@ -264,14 +269,15 @@ $conn->close();
             </div>
 
             <div class="form-group">
-                <label>Email:</label>
+                <label><i class="fas fa-envelope"></i> Email:</label>
                 <input class="w3-input w3-border" type="email" name="email" value="<?php echo htmlspecialchars($email); ?>" required>
             </div>
 
             <div class="form-group">
-                <label>Address:</label>
+                <label><i class="fas fa-home"></i> Address:</label>
                 <input class="w3-input w3-border" type="text" name="address" value="<?php echo htmlspecialchars($address); ?>" required>
             </div>
+
 
             <div class="button-container">
                 <button class="w3-button w3-blue w3-hover-green" type="submit">Update Profile</button>
@@ -284,6 +290,15 @@ $conn->close();
         function cancelEdit() {
             alert('Do you want to cancel editing your profile?');
             window.location.href = 'dashboard.php';
+        }
+
+        function previewImage(event) {
+            const reader = new FileReader();
+            reader.onload = function() {
+                const output = document.getElementById('profileImagePreview');
+                output.src = reader.result;
+            };
+            reader.readAsDataURL(event.target.files[0]);
         }
     </script>
 
