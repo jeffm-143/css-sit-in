@@ -13,31 +13,34 @@ if ($conn->connect_error) {
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $username = htmlspecialchars($_POST['Username']);
-    $password = htmlspecialchars($_POST['Password']);
+    $inputUsername = htmlspecialchars($_POST['Username']);
+    $inputPassword = htmlspecialchars($_POST['Password']);
 
-    $stmt = $conn->prepare("SELECT PASSWORD FROM users WHERE USERNAME = ?");
-    $stmt->bind_param("s", $username);
-    $stmt->execute();
-    $stmt->store_result();
-    $stmt->bind_result($hashedPassword);
-    $stmt->fetch();
+    // Static admin credentials
+    $adminUsername = 'admin';
+    $adminPassword = 'admin123';
 
-    if ($stmt->num_rows > 0 && password_verify($password, $hashedPassword)) {
-        $_SESSION['username'] = $username;
-        echo "<script>
-            alert('Login Successful! Welcome!');
-            window.location.href = 'dashboard.php';
-        </script>";
+    if ($inputUsername === $adminUsername && $inputPassword === $adminPassword) {
+        $_SESSION['username'] = $inputUsername;
+        echo "<script>window.location.href='admin-dashboard.php';</script>";
     } else {
-        echo "<script>
-            alert('Invalid username or password.');
-        </script>";
-    }
+        $stmt = $conn->prepare("SELECT PASSWORD FROM users WHERE USERNAME = ?");
+        $stmt->bind_param("s", $inputUsername);
+        $stmt->execute();
+        $stmt->store_result();
+        $stmt->bind_result($hashedPassword);
+        $stmt->fetch();
 
-    $stmt->close();
-    $conn->close();
+        if ($stmt->num_rows > 0 && password_verify($inputPassword, $hashedPassword)) {
+            $_SESSION['username'] = $inputUsername;
+            echo "<script>window.location.href='dashboard.php';</script>";
+        } else {
+            $error = "Invalid username or password.";
+        }
+        $stmt->close();
+    }
 }
+$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -45,82 +48,44 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea, #50ac6b);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        .login-container {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.3);
-            width: 400px;
-            text-align: center;
-        }
-        .logo {
-            width: 70px;
-            margin-bottom: 10px;
-            width: 50%; 
-            left: 10px;
-        }
-        .csslogo {
-            width: 70px;
-            margin-bottom: 10px;
-            width: 40%; 
-        }
-        .login-container h2 {
-            margin-bottom: 20px;
-            color: #333;
-        }
-        .w3-input {
-            margin-bottom: 15px;
-            border-radius: 5px;
-        }
-        .w3-button {
-            width: 100%;
-            background: #5461dd;
-            color: white;
-            font-size: 16px;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        .w3-button:hover {
-            background: #2b9ebb;
-        }
-        .register-link {
-            margin-top: 10px;
-            font-size: 14px;
-        }
-        .register-link a {
-            color: #0066cc;
-            text-decoration: none;
-        }
-        .register-link a:hover {
-            text-decoration: underline;
-        }
-    </style>
+    <title>Login - CCS Sit-in Monitoring</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-green-500">
 
-    <div class="login-container w3-card w3-animate-opacity">
-        <img src="images/uc.png" alt="UC Logo" class="logo">
-        <img src="images/css.png" alt="Css" class="csslogo">
-        <h2>CCS Sit-in Monitoring System</h2>
+    <div class="relative bg-white/20 backdrop-blur-md border border-white/100 shadow-2x2 rounded-xl p-8 w-full max-w-md text-center">
+        
+        <!-- Logos -->
+        <div class="flex justify-center items-center space-x-4 mb-6">
+            <img src="images/uc.png" alt="UC Logo" class="h-16">
+            <img src="images/css-new.png" alt="CSS Logo" class="h-14">
+        </div>
 
+        <h2 class="text-2xl font-bold text-white tracking-wide mb-6">CCS Sit-in Monitoring System</h2>
+
+        <!-- Login Form -->
         <form method="post" action="">
-            <input class="w3-input w3-border" type="text" name="Username" placeholder="Username" required>
-            <input class="w3-input w3-border" type="password" name="Password" placeholder="Password" required>
-            <button class="w3-button w3-blue w3-hover-green" type="submit">Login</button>
+            <div class="mb-4">
+                <input type="text" name="Username" placeholder="Username" required
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-black/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400">
+            </div>
+
+            <div class="mb-4">
+                <input type="password" name="Password" placeholder="Password" required
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-black/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400">
+            </div>
+
+            <button type="submit"
+                class="w-full bg-blue-500 text-white font-semibold py-3 rounded-lg hover:bg-green-500 transition duration-300 shadow-md">
+                Login
+            </button>
         </form>
 
-        <div class="register-link">
-            Don't have an account? <a href="register.php">Register Here</a>
+        <!-- Register Link -->
+        <div class="mt-6 text-sm text-gray-200">
+            Don't have an account? 
+            <a href="register.php" class="text-yellow-400 font-medium hover:underline">Register Here</a>
         </div>
     </div>
 

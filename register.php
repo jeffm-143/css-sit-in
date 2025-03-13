@@ -54,150 +54,91 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registration</title>
-    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script> 
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea, #50ac6b);
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .w3-container {
-            width: 100%;
-            max-width: 400px; 
-            padding: 15px; 
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-            text-align: center;
-        }
-
-        .w3-input, .w3-select {
-            background: #f1f1f1;
-            border: none;
-            padding: 5px;
-
-            font-size: 15px;
-            width: 100%;
-        }
-
-        .w3-input:focus, .w3-select:focus {
-            background: #e0e0e0;
-        }
-
-        .w3-button {
-            background: #5461dd;
-            color: white;
-            padding: 8px;
-            border-radius: 8px;
-            font-size: 15px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        .w3-button:hover {
-            background: #2b9ebb;
-        }
-
-        .input-group {
-            display: flex;
-            align-items: center;
-            background: #f1f1f1;
-            padding: 3px;
-            border-radius: 5px;
-            margin-bottom: 6px; /* Reduced margin */
-        }
-
-        .input-group i {
-            margin-right: 10px;
-            color: #667eea;
-        }
-
-        .w3-center a {
-            color: #0066cc;
-        }
-        
-    </style>
+    <title>Register | CCS Sit-in Monitoring</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </head>
-<body>
-    <div class="w3-container w3-animate-opacity">
-        <h1 class="w3-center">Create an Account</h1>
-        <form method="post" action="">  
-        <div class="input-group" style="position: relative;">
-            <i class="fas fa-id-badge" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
-            <input type="number" name="IDNO" id="IDNO" class="w3-input" placeholder="ID Number" required style="padding-left: 30px;">
-        </div>
+<body class="flex items-center justify-center min-h-screen bg-gradient-to-br from-indigo-800 via-blue-700 to-green-600">
+    <div class="bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl rounded-xl p-8 w-full max-w-lg text-center">
+        <h2 class="text-3xl font-extrabold text-white tracking-wide mb-6">Create Your Account</h2>
 
-        <div class="input-group" style="position: relative;">
-            <i class="fas fa-user" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
-            <input type="text" name="lName" id="lName" class="w3-input" placeholder="Last Name" required style="padding-left: 30px;">
-        </div>
+        <form method="post" action="" class="space-y-5">
+            <!-- ID Number -->
+            <div class="relative">
+                <i class="fas fa-id-badge absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-300"></i>
+                <input type="number" name="IDNO" placeholder="ID Number" required 
+                    class="w-full pl-12 pr-4 py-3 border border-transparent rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-4 focus:ring-blue-400 transition">
+            </div>
 
-        <div class="input-group" style="position: relative;">
-            <i class="fas fa-user" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
-            <input type="text" name="fName" id="fName" class="w3-input" placeholder="First Name" required style="padding-left: 30px;">
-        </div>
+            <!-- Name Fields (Same Level) -->
+            <div class="grid grid-cols-3 gap-4">
+                <div class="relative">
+                    <i class="fas fa-user absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-300"></i>
+                    <input type="text" name="fName" placeholder="First Name" required 
+                        class="w-full pl-7 pr-4 py-3 border border-transparent rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-4 focus:ring-blue-400 transition">
+                </div>
+                <div class="relative">
+                    <i class="fas fa-user absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-300"></i>
+                    <input type="text" name="MdName" placeholder="Middle Name" 
+                        class="w-full pl-5 pr-4 py-3 border border-transparent rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-4 focus:ring-blue-400 transition">
+                </div>
+                <div class="relative">
+                    <i class="fas fa-user absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-300"></i>
+                    <input type="text" name="lName" placeholder="Last Name" required 
+                        class="w-full pl-7 pr-4 py-3 border border-transparent rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-4 focus:ring-blue-400 transition">
+                </div>
+            </div>  
 
-        <div class="input-group" style="position: relative;">
-            <i class="fas fa-user" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
-            <input type="text" name="MdName" id="MdName" class="w3-input" placeholder="Middle Name" required style="padding-left: 30px;">
-        </div>
+            <!-- Course -->
+            <div class="relative">
+                <i class="fas fa-graduation-cap absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-300"></i>
+                <select name="Course" required class="w-full pl-12 pr-4 py-3 border border-transparent rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-4 focus:ring-blue-400 transition bg-transparent">
+                    <option value="" disabled selected class="bg-gray-700 text-white">Select Course</option>
+                    <option value="BSIT" class="bg-gray-700 text-white">BSIT</option>
+                    <option value="BSED" class="bg-gray-700 text-white">BSED</option>
+                    <option value="BSBA" class="bg-gray-700 text-white">BSBA</option>
+                </select>
+            </div>
 
-        <div class="input-group" style="position: relative; justify-content: center;">
-            <i class="fas fa-graduation-cap" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
-            <select name="Course" id="Course" class="w3-select" required style="padding-left: 30px;">
-                <option value="" disabled selected>Select Course</option>
-                <option value="BSIT">Bachelor of Science in Information Technology (BSIT)</option>
-                <option value="BSED">Bachelor of Secondary Education (BSED)</option>
-                <option value="BSBA">Bachelor of Science in Business Administration (BSBA)</option>
-                <option value="BSNursing">Bachelor of Science in Nursing (BSNursing)</option>
-                <option value="BSEducation">Bachelor of Science in Education (BSEducation)</option>
-                <option value="BSPsychology">Bachelor of Science in Psychology (BSPsychology)</option>
-                <option value="BSArchitecture">Bachelor of Science in Architecture (BSArchitecture)</option>
-                <option value="LLB">Bachelor of Laws (LLB)</option>
-            </select>
-        </div>
+            <!-- Username -->
+            <div class="relative">
+                <i class="fas fa-user-circle absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-300"></i>
+                <input type="text" name="username" placeholder="Username" required 
+                    class="w-full pl-12 pr-4 py-3 border border-transparent rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-4 focus:ring-blue-400 transition">
+            </div>
 
-        <div class="input-group" style="position: relative;">
-            <i class="fas fa-layer-group" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
-            <select name="Yrlevel" id="Yrlevel" class="w3-select" required style="padding-left: 30px;">
-                <option value="" disabled selected>Select Year Level</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-            </select>
-        </div>
+            <!-- Password -->
+            <div class="relative">
+                <i class="fas fa-lock absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-300"></i>
+                <input type="password" name="password" placeholder="Password" required 
+                    class="w-full pl-12 pr-4 py-3 border border-transparent rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-4 focus:ring-blue-400 transition">
+            </div>
 
-        <div class="input-group" style="position: relative;">
-            <i class="fas fa-user-circle" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
-            <input type="text" name="username" id="username" class="w3-input" placeholder="Username" required style="padding-left: 30px;">
-        </div>
+            <!-- Email -->
+            <div class="relative">
+                <i class="fas fa-envelope absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-300"></i>
+                <input type="email" name="email" placeholder="Email" required 
+                    class="w-full pl-12 pr-4 py-3 border border-transparent rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-4 focus:ring-blue-400 transition">
+            </div>
 
-        <div class="input-group" style="position: relative;">
-            <i class="fas fa-lock" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
-            <input type="password" name="password" id="password" class="w3-input" placeholder="Password" required style="padding-left: 30px;">
-        </div>
+            <!-- Address -->
+            <div class="relative">
+                <i class="fas fa-home absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-300"></i>
+                <input type="text" name="address" placeholder="Address" required 
+                    class="w-full pl-12 pr-4 py-3 border border-transparent rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-4 focus:ring-blue-400 transition">
+            </div>
 
-        <div class="input-group" style="position: relative;">
-            <i class="fas fa-envelope" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
-            <input type="email" name="email" id="email" class="w3-input" placeholder="Email" required style="padding-left: 30px;">
-        </div>
-
-        <div class="input-group" style="position: relative;">
-            <i class="fas fa-home" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: black;"></i>
-            <input type="text" name="address" id="address" class="w3-input" placeholder="Address" required style="padding-left: 30px;">
-        </div>
-
-
-            <button type="submit" class="w3-button w3-block w3-blue w3-hover-green">Register</button>
+            <!-- Register Button -->
+            <button type="submit" class="w-full bg-gradient-to-r from-green-400 to-blue-500 text-white py-3 rounded-lg font-semibold shadow-md hover:opacity-90 transition duration-300">
+                Register
+            </button>
         </form>
-        <p class="w3-center w3-padding-16 ">Already have an account? <a href="login.php">Login Here</a></p>
+
+        <!-- Login Link -->
+        <p class="mt-4 text-sm text-gray-200">
+            Already have an account? 
+            <a href="login.php" class="text-yellow-400 font-medium hover:underline">Login Here</a>
+        </p>
     </div>
 </body>
 </html>
