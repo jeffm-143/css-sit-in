@@ -1,39 +1,84 @@
+<?php
+session_start();
+require_once 'database.php';
+
+$feedbacks = $conn->query("
+    SELECT f.*, s.lab_room, s.start_time, u.FIRSTNAME, u.LASTNAME
+    FROM feedback f
+    JOIN sit_in_sessions s ON f.session_id = s.id
+    JOIN users u ON s.student_id = u.ID_NUMBER
+    ORDER BY f.created_at DESC
+");
+
+// Calculate average ratings
+$avg_rating = $conn->query("
+    SELECT AVG(rating) as avg_rating, lab_room
+    FROM feedback f
+    JOIN sit_in_sessions s ON f.session_id = s.id
+    GROUP BY lab_room
+");
+
+$ratings = [];
+while ($row = $avg_rating->fetch_assoc()) {
+    $ratings[$row['lab_room']] = round($row['avg_rating'], 2);
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Navbar</title>
-    <!-- Tailwind CSS -->
+    <title>Feedback Reports</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 </head>
-<body>
+<body class="bg-gray-100">
+    <?php include 'admin-nav.php'; ?>
 
-    <!-- Navigation Bar -->
-    <nav class="bg-blue-900 py-4 px-6">
-        <div class="max-w-7x2 mx-auto flex justify-between items-center">
-
-            <!-- Logo & Title -->
-            <a href="#" class="text-white text-xl font-semibold tracking-wide">Feedback Reports</a>
-
-            <!-- Desktop Navigation Links -->
-            <ul class="flex space-x-6 text-white text-sm">
-                <li><a href="admin-dashboard.php" class="hover:text-gray-300">Home</a></li>
-                <li><a href="search.php" class="hover:text-gray-300">Search</a></li>
-                <li><a href="students.php" class="hover:text-gray-300">Students</a></li>
-                <li><a href="sit-in.php" class="hover:text-gray-300">Sit-in</a></li>
-                <li><a href="view-sit-in.php" class="hover:text-gray-300">View Sit-in Records</a></li>
-                <li><a href="sit-in-reports.php" class="hover:text-gray-300">Sit-in Reports</a></li>
-                <li><a href="feedback-reports.php" class="hover:text-gray-300">Feedback Reports</a></li>
-                <li><a href="reservation-admin.php" class="hover:text-gray-300">Reservation</a></li>
-                <li>
-                    <a href="logout.php" class="bg-yellow-500 text-black px-4 py-2 rounded-md hover:bg-yellow-600">
-                        Log out
-                    </a>
-                </li>
-            </ul>
+    <div class="max-w-7xl mx-auto p-6">
+        <!-- Ratings Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <?php foreach ($ratings as $lab => $rating): ?>
+            <div class="bg-white rounded-lg shadow-md p-4">
+                <h3 class="font-bold text-lg mb-2"><?php echo htmlspecialchars($lab); ?></h3>
+                <div class="flex items-center">
+                    <?php for($i = 1; $i <= 5; $i++): ?>
+                        <i class="fas fa-star <?php echo $i <= $rating ? 'text-yellow-400' : 'text-gray-300'; ?>"></i>
+                    <?php endfor; ?>
+                    <span class="ml-2">(<?php echo $rating; ?>)</span>
+                </div>
+            </div>
+            <?php endforeach; ?>
         </div>
-    </nav>
 
+        <!-- Feedback List -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold mb-4">Student Feedback</h2>
+            <div class="space-y-4">
+                <?php while ($feedback = $feedbacks->fetch_assoc()): ?>
+                    <div class="border-b pb-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-semibold">
+                                    <?php echo htmlspecialchars($feedback['FIRSTNAME'] . ' ' . $feedback['LASTNAME']); ?>
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    <?php echo htmlspecialchars($feedback['lab_room']); ?> |
+                                    <?php echo date('M d, Y h:i A', strtotime($feedback['created_at'])); ?>
+                                </p>
+                            </div>
+                            <div class="flex">
+                                <?php for($i = 1; $i <= 5; $i++): ?>
+                                    <i class="fas fa-star <?php echo $i <= $feedback['rating'] ? 'text-yellow-400' : 'text-gray-300'; ?>"></i>
+                                <?php endfor; ?>
+                            </div>
+                        </div>
+                        <p class="mt-2"><?php echo nl2br(htmlspecialchars($feedback['comments'])); ?></p>
+                    </div>
+                <?php endwhile; ?>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

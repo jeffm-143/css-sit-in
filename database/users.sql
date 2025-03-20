@@ -41,9 +41,30 @@ CREATE TABLE `users` (
   `ADDRESS` varchar(30) DEFAULT NULL,
   `SESSION` varchar(50) DEFAULT NULL,
   `IMAGE` varchar(100) DEFAULT NULL,
-  `CREATED_AT` timestamp NOT NULL DEFAULT current_timestamp()
+  `CREATED_AT` timestamp NOT NULL DEFAULT current_timestamp(),
+  `user_type` ENUM('student', 'admin') DEFAULT 'student' NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+CREATE TABLE reservations (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50),
+    date DATE,
+    laboratory VARCHAR(50),
+    time_slot VARCHAR(50),
+    purpose TEXT,
+    status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (username) REFERENCES users(USERNAME)
+);
+
+-- Announcements table
+CREATE TABLE announcements (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    admin_username VARCHAR(50),
+    content TEXT,
+    date_posted DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_username) REFERENCES users(USERNAME)
+);
 --
 -- Indexes for dumped tables
 --
@@ -65,6 +86,19 @@ ALTER TABLE `users`
 --
 ALTER TABLE `users`
   MODIFY `ID` int(11) NOT NULL AUTO_INCREMENT;
+
+-- Insert default admin account
+INSERT INTO users (ID_NUMBER, LASTNAME, FIRSTNAME, USERNAME, PASSWORD, user_type, EMAIL) 
+VALUES (
+    '999999', 
+    'Administrator', 
+    'System', 
+    'admin',
+    '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- This is the hash for 'password'
+    'admin',
+    'admin@uc.edu.ph'
+) ON DUPLICATE KEY UPDATE user_type = 'admin';
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

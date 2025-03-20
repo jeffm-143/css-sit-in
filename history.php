@@ -1,151 +1,100 @@
-<?php
-// Database connection (update with your actual credentials)
-$servername = 'localhost'; 
-$username = "root";
-$password = "";
-$dbname = "css_sit_in";
-
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-// Check if the table exists
-$table_check_query = "SHOW TABLES LIKE 'history'";
-$table_check_result = $conn->query($table_check_query);
-
-if ($table_check_result->num_rows == 0) {
-    die("Table 'history' doesn't exist in the database.");
-}
-
-$sql = "SELECT * FROM history";
-$result = $conn->query($sql);
-
-if (!$result) {
-    die("Query failed: " . $conn->error);
-}
-?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>History</title>
-    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-        }
-        .nav-bar {
-            background-color: navy;
-            padding: 15px;
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .nav-bar ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            display: flex;
-            justify-content: center; 
-            gap: 10px;
-        }
-        .nav-bar ul li {
-            display: inline-block;
-        }
-
-        .nav-bar ul li a {
-            color: white;
-            text-decoration: none;
-            font-weight: bold;
-            padding: 10px 15px; 
-            display: block; 
-            transition: color 0.3s ease-in-out;
-        }
-
-        .nav-bar ul li a:hover {
-            color: yellow;
-        }
-
-        .logout {
-            background: yellow;
-            color: navy;
-            padding: 8px 12px;
-            text-decoration: none;
-            font-weight: bold;
-            border-radius: 5px;
-            transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
-        }
-
-        .logout:hover {
-            background: navy;
-            color: yellow;
-        }
-        .container { width: 80%; margin: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #004080; color: white; }
-    </style>
+    <title>Reservation History</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 </head>
-<body>
+<body class="bg-gray-100 min-h-screen">
     <!-- Navigation -->
-    <header>
-        <div class="nav-bar w3-container">
-            <h2 style="margin-right: auto;">History</h2>
-            <nav>
-                <ul>
-                    <li><a href="notification.php">Notification</a></li>
-                    <li><a href="dashboard.php">Home</a></li>
-                    <li><a href="edit_profile.php">Edit Profile</a></li>
-                    <li><a href="history.php">History</a></li>
-                    <li><a href="reservation.php">Reservation</a></li>
-                </ul>
+    <header class="bg-navy-800 shadow-lg">
+        <div class="container mx-auto px-4">
+            <nav class="flex items-center justify-between h-16">
+                <h2 class="text-2xl font-bold text-white">Reservation History</h2>
+                <div class="flex items-center space-x-8">
+                    <ul class="flex space-x-6">
+                        <li><a href="#" class="text-white hover:text-yellow-400 transition">Notification</a></li>
+                        <li><a href="dashboard.php" class="text-white hover:text-yellow-400 transition">Home</a></li>
+                        <li><a href="edit_profile.php" class="text-white hover:text-yellow-400 transition">Edit Profile</a></li>
+                        <li><a href="history.php" class="text-white hover:text-yellow-400 transition">History</a></li>
+                        <li><a href="reservation.php" class="text-white hover:text-yellow-400 transition">Reservation</a></li>
+                    </ul>
+                    <a href="logout.php" class="bg-yellow-400 text-navy-800 px-4 py-2 rounded-lg font-bold hover:bg-navy-800 hover:text-yellow-400 transition duration-300">Log out</a>
+                </div>
             </nav>
-            <a href="logout.php" class="logout">Log out</a>
         </div>
     </header>
 
-    <div class="container">
-        <h2>History Information</h2>
-        <table id="historyTable" class="display">
-            <thead>
-                <tr>
-                    <th>ID Number</th>
-                    <th>Name</th>
-                    <th>Sit Purpose</th>
-                    <th>Laboratory</th>
-                    <th>Login</th>
-                    <th>Logout</th>
-                    <th>Date</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php while($row = $result->fetch_assoc()): ?>
-                <tr>
-                    <td><?= $row['id_number'] ?></td>
-                    <td><?= $row['name'] ?></td>
-                    <td><?= $row['purpose'] ?></td>
-                    <td><?= $row['laboratory'] ?></td>
-                    <td><?= $row['login_time'] ?></td>
-                    <td><?= $row['logout_time'] ?></td>
-                    <td><?= $row['date'] ?></td>
-                    <td><button>View</button></td>
-                </tr>
-                <?php endwhile; ?>
-            </tbody>
-        </table>
-    </div>
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <!-- History Table -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Laboratory</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Slot</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purpose</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <!-- Sample Data -->
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2024-01-20</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Computer Lab 1</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">9:00 AM - 10:00 AM</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Project Work</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                    Approved
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2024-01-19</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Computer Lab 2</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2:00 PM - 3:00 PM</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Research</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                    Pending
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2024-01-18</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Computer Lab 3</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">3:00 PM - 4:00 PM</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Assignment</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                    Rejected
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'navy': {
+                            800: '#000080',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
 </body>
 </html>
-
-<?php $conn->close(); ?>

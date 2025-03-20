@@ -16,29 +16,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $inputUsername = htmlspecialchars($_POST['Username']);
     $inputPassword = htmlspecialchars($_POST['Password']);
 
-    // Static admin credentials
-    $adminUsername = 'admin';
-    $adminPassword = 'admin123';
+    // Check if user exists and get their password and type
+    $stmt = $conn->prepare("SELECT PASSWORD, user_type FROM users WHERE USERNAME = ?");
+    $stmt->bind_param("s", $inputUsername);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $user = $result->fetch_assoc();
 
-    if ($inputUsername === $adminUsername && $inputPassword === $adminPassword) {
-        $_SESSION['username'] = $inputUsername;
-        echo "<script>window.location.href='admin-dashboard.php';</script>";
-    } else {
-        $stmt = $conn->prepare("SELECT PASSWORD FROM users WHERE USERNAME = ?");
-        $stmt->bind_param("s", $inputUsername);
-        $stmt->execute();
-        $stmt->store_result();
-        $stmt->bind_result($hashedPassword);
-        $stmt->fetch();
+    if ($user) {
+        $hashedPassword = $user['PASSWORD'];
+        $userType = $user['user_type'];
 
-        if ($stmt->num_rows > 0 && password_verify($inputPassword, $hashedPassword)) {
+        // Verify password
+        if (password_verify($inputPassword, $hashedPassword)) {
             $_SESSION['username'] = $inputUsername;
-            echo "<script>window.location.href='dashboard.php';</script>";
-        } else {
-            $error = "Invalid username or password.";
+            $_SESSION['user_type'] = $userType;
+            
+            if ($userType === 'admin') {
+                header("Location: admin-dashboard.php");
+            } else {
+                header("Location: dashboard.php");
+            }
+            exit();
         }
-        $stmt->close();
     }
+    $error = "Invalid username or password.";
+    $stmt->close();
 }
 $conn->close();
 ?>

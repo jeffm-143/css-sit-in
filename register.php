@@ -26,8 +26,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-    $stmt = $conn->prepare("INSERT INTO users (ID_NUMBER, LASTNAME, FIRSTNAME, MIDDLENAME, COURSE, YEAR, USERNAME, PASSWORD, EMAIL, ADDRESS) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt = $conn->prepare("INSERT INTO users (ID_NUMBER, LASTNAME, FIRSTNAME, MIDDLENAME, COURSE, YEAR, USERNAME, PASSWORD, EMAIL, ADDRESS, user_type) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'student')");
     $stmt->bind_param("issssissss", $IDNO, $lName, $fName, $MdName, $Course, $Yrlevel, $username, $hashedPassword, $email, $address);
 
     if ($stmt->execute()) {
@@ -97,6 +97,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <option value="BSIT" class="bg-gray-700 text-white">BSIT</option>
                     <option value="BSED" class="bg-gray-700 text-white">BSED</option>
                     <option value="BSBA" class="bg-gray-700 text-white">BSBA</option>
+                </select>
+            </div>
+
+            <!-- Year Level -->
+            <div class="relative">
+                <i class="fas fa-layer-group absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-300"></i>
+                <select name="Yrlevel" required class="w-full pl-12 pr-4 py-3 border border-transparent rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-4 focus:ring-blue-400 transition bg-transparent">
+                    <option value="" disabled selected class="bg-gray-700 text-white">Select Year Level</option>
+                    <option value="1" class="bg-gray-700 text-white">1st Year</option>
+                    <option value="2" class="bg-gray-700 text-white">2nd Year</option>
+                    <option value="3" class="bg-gray-700 text-white">3rd Year</option>
+                    <option value="4" class="bg-gray-700 text-white">4th Year</option>
                 </select>
             </div>
 
