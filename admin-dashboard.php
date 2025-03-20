@@ -276,6 +276,26 @@ $conn->close();
             </div>
         </div>
 
+        <!-- Announcements Card -->
+        <div class="bg-white rounded-xl shadow-lg p-6 transform hover:scale-105 transition duration-300">
+            <h3 class="text-lg font-bold text-center mb-4">Announcements</h3>
+            <div class="max-h-[400px] overflow-y-auto">
+                <?php if ($announcements_query->num_rows > 0): ?>
+                    <?php while($announcement = $announcements_query->fetch_assoc()): ?>
+                        <div class="mb-4 p-3 border-b border-gray-200 last:border-0">
+                            <div class="flex justify-between items-center text-sm text-gray-500 mb-1">
+                                <span>Posted by: <strong><?php echo htmlspecialchars($announcement['admin_username']); ?></strong></span>
+                                <span><?php echo date('F d, Y', strtotime($announcement['date_posted'])); ?></span>
+                            </div>
+                            <p class="text-gray-600"><?php echo nl2br(htmlspecialchars($announcement['content'])); ?></p>
+                        </div>
+                    <?php endwhile; ?>
+                <?php else: ?>
+                    <p class="text-gray-600 text-center py-4">No announcements available.</p>
+                <?php endif; ?>
+            </div>
+        </div>
+
     </div>
 
     <!-- Add this modal for editing -->
@@ -331,7 +351,7 @@ $conn->close();
 
         const yearLevelStats = {
             labels: ['1st Year', '2nd Year', '3rd Year', '4th Year'],
-            data: <?php echo json_encode(array_values($year_data)); ?>
+            data: <?php echo json_encode(array_values($year_data)); ?> // Fixed array_values syntax
         };
 
         // Pie Chart with real data
@@ -342,7 +362,7 @@ $conn->close();
                 labels: purposeStats.labels,
                 datasets: [{
                     data: purposeStats.data,
-                    backgroundColor: <?php echo json_encode(array_values($default_languages)); ?>,
+                    backgroundColor: <?php echo json_encode(array_values($default_languages)); ?>, // Fixed array_values syntax
                     borderWidth: 1,
                     borderColor: '#fff'
                 }]

@@ -93,8 +93,8 @@ if (empty($lab_counts)) {
                             <th class="px-4 py-2 border">Name</th>
                             <th class="px-4 py-2 border">Purpose</th>
                             <th class="px-4 py-2 border">Lab</th>
-                            <th class="px-4 py-2 border">Login</th>
-                            <th class="px-4 py-2 border">Logout</th>
+                            <th class="px-4 py-2 border">Time In</th>
+                            <th class="px-4 py-2 border">Time Out</th>
                             <th class="px-4 py-2 border">Date</th>
                         </tr>
                     </thead>

@@ -113,8 +113,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <td class="border px-4 py-2">Room <?php echo htmlspecialchars($session['lab_room']); ?></td>
                                     <td class="border px-4 py-2"><?php echo htmlspecialchars($session['SESSION']); ?></td>
                                     <td class="border px-4 py-2">
-                                        <span class="px-2 py-1 rounded-full text-xs <?php echo $session['elapsed_time'] < 30 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'; ?>">
-                                            <?php echo $session['elapsed_time'] < 30 ? 'Active' : 'Time Expired'; ?>
+                                        <span class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                                            Active
                                         </span>
                                     </td>
                                     <td class="border px-4 py-2">

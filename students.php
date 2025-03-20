@@ -59,7 +59,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch students
-$query = "SELECT * FROM users WHERE user_type = 'student' ORDER BY LASTNAME ASC";
+$query = "SELECT * FROM users 
+          WHERE user_type = 'student' 
+          ORDER BY ID ASC";
 $result = $conn->query($query);
 ?>
 
@@ -89,7 +91,10 @@ $result = $conn->query($query);
                 <table class="w-full border-collapse bg-white text-left text-sm">
                     <thead class="bg-gray-200">
                         <tr>
-                            <th class="p-3">ID Number</th>
+                            <th class="p-3">
+                                ID Number
+                                <span class="ml-1 text-xs text-gray-500">↑</span>
+                            </th>
                             <th class="p-3">Name</th>
                             <th class="p-3">Year Level</th>
                             <th class="p-3">Course</th>
