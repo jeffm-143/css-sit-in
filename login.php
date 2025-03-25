@@ -32,11 +32,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $_SESSION['username'] = $inputUsername;
             $_SESSION['user_type'] = $userType;
             
-            if ($userType === 'admin') {
-                header("Location: admin-dashboard.php");
-            } else {
-                header("Location: dashboard.php");
-            }
+            // Instead of immediate redirect, return success status
+            echo json_encode(['success' => true, 'userType' => $userType]);
             exit();
         }
     }
@@ -56,6 +53,19 @@ $conn->close();
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-green-500">
+
+    <!-- Success Modal -->
+    <div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-sm mx-auto">
+            <div class="text-center">
+                <svg class="mx-auto mb-4 w-14 h-14 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Login Successful!</h3>
+                <p class="text-gray-500 mb-4">You will be redirected to the dashboard.</p>
+            </div>
+        </div>
+    </div>
 
     <div class="relative bg-white/20 backdrop-blur-md border border-white/100 shadow-2x2 rounded-xl p-8 w-full max-w-md text-center">
         
@@ -92,5 +102,46 @@ $conn->close();
         </div>
     </div>
 
+    <script>
+        document.querySelector('form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            fetch('', {
+                method: 'POST',
+                body: new FormData(this)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const modal = document.getElementById('successModal');
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                    
+                    const modalContent = modal.querySelector('.text-center');
+                    let okButton = modalContent.querySelector('button');
+
+                    if (!okButton) {
+                        okButton = document.createElement('button');
+                        okButton.textContent = 'OK';
+                        okButton.className = 'mt-4 bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-500 transition duration-300';
+                        okButton.addEventListener('click', () => {
+                            window.location.href = data.userType === 'admin' ? 'admin-dashboard.php' : 'dashboard.php';
+                        });
+                        modalContent.appendChild(okButton);
+                    }
+                    const enterKeyListener = function(event) {
+                        if (event.key === 'Enter') {
+                            window.location.href = data.userType === 'admin' ? 'admin-dashboard.php' : 'dashboard.php';
+                        }
+                    };
+                    document.removeEventListener('keydown', enterKeyListener);
+                    document.addEventListener('keydown', enterKeyListener);
+                }
+            });
+        });
+    </script>
+    </script>
+    </script>
+    </script>
 </body>
 </html>

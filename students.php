@@ -12,33 +12,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $lastname = $_POST['lastname'];
         $year = $_POST['year'];
         $course = $_POST['course'];
-        
+
         $stmt = $conn->prepare("UPDATE users SET ID_NUMBER=?, FIRSTNAME=?, LASTNAME=?, YEAR=?, COURSE=? WHERE ID=? AND user_type='student'");
         $stmt->bind_param("sssisi", $id_number, $firstname, $lastname, $year, $course, $id);
-        
+
         if ($stmt->execute()) {
             echo "<script>alert('Student updated successfully!'); window.location.href='students.php';</script>";
         } else {
             echo "<script>alert('Error updating student.');</script>";
         }
     }
-    
+
     // Delete Student
     if (isset($_POST['delete_student'])) {
         $id = $_POST['id'];
-        
+
         // Check for active sessions
         $check_stmt = $conn->prepare("SELECT COUNT(*) FROM sit_in_sessions WHERE student_id = (SELECT ID_NUMBER FROM users WHERE ID = ?) AND status = 'active'");
         $check_stmt->bind_param("i", $id);
         $check_stmt->execute();
         $active_sessions = $check_stmt->get_result()->fetch_row()[0];
-        
+
         if ($active_sessions > 0) {
             echo "<script>alert('Cannot delete student with active sessions.');</script>";
         } else {
             $stmt = $conn->prepare("DELETE FROM users WHERE ID = ? AND user_type = 'student'");
             $stmt->bind_param("i", $id);
-            
+
             if ($stmt->execute()) {
                 echo "<script>alert('Student deleted successfully!'); window.location.href='students.php';</script>";
             } else {
@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
-    
+
     // Reset All Sessions
     if (isset($_POST['reset_sessions'])) {
         $stmt = $conn->prepare("UPDATE users SET SESSION = 30 WHERE user_type = 'student'");
@@ -56,12 +56,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo "<script>alert('Error resetting sessions.');</script>";
         }
     }
+
+    // Reset Individual Student Session
+    if (isset($_POST['reset_student_session'])) {
+        $id = $_POST['id'];
+
+        $stmt = $conn->prepare("UPDATE users SET SESSION = 30 WHERE ID = ? AND user_type = 'student'");
+        $stmt->bind_param("i", $id);
+
+        if ($stmt->execute()) {
+            echo "<script>alert('Student session reset successfully!'); window.location.href='students.php';</script>";
+        } else {
+            echo "<script>alert('Error resetting session.');</script>";
+        }
+    }
 }
 
 // Fetch students
-$query = "SELECT * FROM users 
-          WHERE user_type = 'student' 
-          ORDER BY ID ASC";
+$query = "SELECT * FROM users WHERE user_type = 'student' ORDER BY ID ASC";
 $result = $conn->query($query);
 ?>
 
@@ -75,7 +87,7 @@ $result = $conn->query($query);
 </head>
 <body class="bg-gray-100">
     <?php include 'admin-nav.php'; ?>
-    <div class="max-w-7xl mx-auto p-6">
+    <div class="max-w-7xl mx-auto p-6 ">
         <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-2xl font-bold mb-6">Students Information</h2>
 
@@ -88,13 +100,10 @@ $result = $conn->query($query);
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full border-collapse bg-white text-left text-sm">
+                <table class="w-full border-collapse bg-white text-left text-sm ">
                     <thead class="bg-gray-200">
-                        <tr>
-                            <th class="p-3">
-                                ID Number
-                                <span class="ml-1 text-xs text-gray-500">↑</span>
-                            </th>
+                        <tr class="text-center">
+                            <th class="p-3">ID Number</th>
                             <th class="p-3">Name</th>
                             <th class="p-3">Year Level</th>
                             <th class="p-3">Course</th>
@@ -102,7 +111,7 @@ $result = $conn->query($query);
                             <th class="p-3">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="text-center">
                         <?php while ($row = $result->fetch_assoc()): ?>
                             <tr class="border-t">
                                 <td class="p-3"><?= htmlspecialchars($row['ID_NUMBER']) ?></td>
@@ -110,7 +119,7 @@ $result = $conn->query($query);
                                 <td class="p-3"><?= htmlspecialchars($row['YEAR']) ?></td>
                                 <td class="p-3"><?= htmlspecialchars($row['COURSE']) ?></td>
                                 <td class="p-3"><?= htmlspecialchars($row['SESSION']) ?></td>
-                                <td class="p-3 flex gap-2">
+                                <td class="p-3 flex gap-2 justify-center items-center">
                                     <button onclick="editStudent(<?= htmlspecialchars(json_encode($row)) ?>)" 
                                             class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">
                                         Edit
@@ -118,6 +127,10 @@ $result = $conn->query($query);
                                     <button onclick="deleteStudent(<?= $row['ID'] ?>)"
                                             class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">
                                         Delete
+                                    </button>
+                                    <button onclick="resetSession(<?= $row['ID'] ?>)"
+                                            class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600">
+                                        Reset Session
                                     </button>
                                 </td>
                             </tr>
@@ -198,6 +211,19 @@ $result = $conn->query($query);
                 form.method = 'POST';
                 form.innerHTML = `
                     <input type="hidden" name="delete_student" value="1">
+                    <input type="hidden" name="id" value="${id}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        function resetSession(id) {
+            if (confirm('Are you sure you want to reset this student\'s session?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `
+                    <input type="hidden" name="reset_student_session" value="1">
                     <input type="hidden" name="id" value="${id}">
                 `;
                 document.body.appendChild(form);
