@@ -24,9 +24,9 @@ document.querySelector('form')?.addEventListener('submit', function(e) {
  */
 
 /**
- * Displays a modal dialog with a given message and an "OK" button.
+
  *
- * @param {string} message - The message to display inside the modal.
+ * @param {string} message 
  */
 function showModal(message) {
     const modal = document.createElement('div');

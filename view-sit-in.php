@@ -79,16 +79,17 @@ if (empty($lab_counts)) {
             </div>
             <div class="flex items-end">
                 <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Filter</button>
+                <button type="button" id="resetBtn" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">Reset</button>
             </div>
         </form>
 
+
         <!-- Table -->
         <div class="overflow-x-auto">
-            <div class="max-h-[600px] overflow-y-auto"> <!-- Add this wrapper div -->
+            <div class="max-h-[600px] overflow-y-auto"> 
                 <table class="min-w-full table-auto border-collapse border border-gray-300">
-                    <thead class="bg-gray-200 sticky top-0"> <!-- Add sticky header -->
+                    <thead class="bg-gray-200 sticky top-0"> 
                         <tr>
-                            <th class="px-4 py-2 border">Sit-in Number</th>
                             <th class="px-4 py-2 border">ID Number</th>
                             <th class="px-4 py-2 border">Name</th>
                             <th class="px-4 py-2 border">Purpose</th>
@@ -103,7 +104,6 @@ if (empty($lab_counts)) {
                         $sessions->data_seek(0); // Reset pointer
                         while ($session = $sessions->fetch_assoc()): ?>
                             <tr class="bg-white">
-                                <td class="border px-4 py-2"><?php echo $session['id']; ?></td>
                                 <td class="border px-4 py-2"><?php echo $session['student_id']; ?></td>
                                 <td class="border px-4 py-2"><?php echo $session['FIRSTNAME'] . ' ' . $session['LASTNAME']; ?></td>
                                 <td class="border px-4 py-2"><?php echo $session['purpose']; ?></td>
@@ -115,7 +115,7 @@ if (empty($lab_counts)) {
                         <?php endwhile; ?>
                     </tbody>
                 </table>
-            </div> <!-- Close wrapper div -->
+            </div> 
         </div>
     </div>
 
@@ -185,6 +185,7 @@ if (empty($lab_counts)) {
                 }
             }
         });
+        
     </script>
 </body>
 </html>
