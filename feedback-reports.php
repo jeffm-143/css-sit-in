@@ -1,27 +1,33 @@
 <?php
 session_start();
-require_once 'database.php';
 
+$host = 'localhost';  
+$username = 'root';  
+$password = '';      
+$dbname = 'css_sit_in'; 
+
+$conn = new mysqli($host, $username, $password, $dbname);
+
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Handle delete request
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_id'])) {
+    $delete_id = intval($_POST['delete_id']);
+    $conn->query("DELETE FROM feedback WHERE id = $delete_id");
+    header("Location: feedback.php");
+    exit();
+}
+
+// Fetch feedback records
 $feedbacks = $conn->query("
-    SELECT f.*, s.lab_room, s.start_time, u.FIRSTNAME, u.LASTNAME
+    SELECT f.id, f.comments, f.created_at, s.lab_room, s.start_time, u.ID_NUMBER, u.FIRSTNAME, u.LASTNAME
     FROM feedback f
     JOIN sit_in_sessions s ON f.session_id = s.id
     JOIN users u ON s.student_id = u.ID_NUMBER
     ORDER BY f.created_at DESC
 ");
-
-// Calculate average ratings
-$avg_rating = $conn->query("
-    SELECT AVG(rating) as avg_rating, lab_room
-    FROM feedback f
-    JOIN sit_in_sessions s ON f.session_id = s.id
-    GROUP BY lab_room
-");
-
-$ratings = [];
-while ($row = $avg_rating->fetch_assoc()) {
-    $ratings[$row['lab_room']] = round($row['avg_rating'], 2);
-}
 ?>
 
 <!DOCTYPE html>
@@ -33,50 +39,44 @@ while ($row = $avg_rating->fetch_assoc()) {
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 </head>
-<body class="bg-gray-100">
-    <?php include 'admin-nav.php'; ?>
+<body class="bg-gray-100 min-h-screen">
+    <?php include 'admin-nav.php'; ?> <!-- Include the Navbar -->
 
     <div class="max-w-7xl mx-auto p-6">
-        <!-- Ratings Overview -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <?php foreach ($ratings as $lab => $rating): ?>
-            <div class="bg-white rounded-lg shadow-md p-4">
-                <h3 class="font-bold text-lg mb-2"><?php echo htmlspecialchars($lab); ?></h3>
-                <div class="flex items-center">
-                    <?php for($i = 1; $i <= 5; $i++): ?>
-                        <i class="fas fa-star <?php echo $i <= $rating ? 'text-yellow-400' : 'text-gray-300'; ?>"></i>
-                    <?php endfor; ?>
-                    <span class="ml-2">(<?php echo $rating; ?>)</span>
-                </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-
-        <!-- Feedback List -->
         <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-bold mb-4">Student Feedback</h2>
-            <div class="space-y-4">
-                <?php while ($feedback = $feedbacks->fetch_assoc()): ?>
-                    <div class="border-b pb-4">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <p class="font-semibold">
-                                    <?php echo htmlspecialchars($feedback['FIRSTNAME'] . ' ' . $feedback['LASTNAME']); ?>
-                                </p>
-                                <p class="text-sm text-gray-600">
-                                    <?php echo htmlspecialchars($feedback['lab_room']); ?> |
-                                    <?php echo date('M d, Y h:i A', strtotime($feedback['created_at'])); ?>
-                                </p>
-                            </div>
-                            <div class="flex">
-                                <?php for($i = 1; $i <= 5; $i++): ?>
-                                    <i class="fas fa-star <?php echo $i <= $feedback['rating'] ? 'text-yellow-400' : 'text-gray-300'; ?>"></i>
-                                <?php endfor; ?>
-                            </div>
-                        </div>
-                        <p class="mt-2"><?php echo nl2br(htmlspecialchars($feedback['comments'])); ?></p>
-                    </div>
-                <?php endwhile; ?>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Laboratory</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Feedback</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <?php while ($feedback = $feedbacks->fetch_assoc()): ?>
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($feedback['ID_NUMBER']); ?></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($feedback['FIRSTNAME'] . ' ' . $feedback['LASTNAME']); ?></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($feedback['lab_room']); ?></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo date('M d, Y', strtotime($feedback['created_at'])); ?></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo nl2br(htmlspecialchars($feedback['comments'])); ?></td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <form method="POST" onsubmit="return confirm('Are you sure you want to delete this feedback?');">
+                                        <input type="hidden" name="delete_id" value="<?php echo $feedback['id']; ?>">
+                                        <button type="submit" class="text-red-600 hover:text-red-800">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

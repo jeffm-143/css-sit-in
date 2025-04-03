@@ -396,46 +396,6 @@ View Full Schedule
 </div>
 </div>
 
-<!-- Announcements Section with Animated Blob -->
-<div id="announcements" class="py-20 px-4">
-<div class="container mx-auto">
-<div class="grid md:grid-cols-2 gap-12 items-center">
-<div class="order-2 md:order-1">
-<div class="bg-white rounded-2xl shadow-xl p-6 max-w-lg mx-auto">
-<h3 class="text-xl font-semibold mb-6 flex items-center">
-<i class="fas fa-bullhorn text-teal-500 mr-2"></i>
-Latest Announcements
-</h3>
-
-<div class="space-y-6">
-<?php if (count($announcements) > 0): ?>
-<?php foreach(array_slice($announcements, 0, 3) as $announcement): ?>
-<div class="border-l-4 border-teal-500 pl-4 py-1">
-<h4 class="font-medium text-gray-800"><?php echo htmlspecialchars($announcement['title']); ?></h4>
-<p class="text-sm text-gray-600 mt-1"><?php echo htmlspecialchars($announcement['content']); ?></p>
-<div class="flex items-center mt-2 text-xs text-gray-500">
-<i class="far fa-calendar-alt mr-1"></i>
-<?php echo date('F j, Y', strtotime($announcement['post_date'])); ?>
-</div>
-</div>
-<?php endforeach; ?>
-<?php else: ?>
-<div class="text-center py-6 text-gray-500">
-<i class="far fa-bell-slash text-3xl mb-2"></i>
-<p>No announcements yet.</p>
-</div>
-<?php endif; ?>
-</div>
-
-<?php if (count($announcements) > 3): ?>
-<div class="mt-6 text-center">
-<a href="#" class="text-teal-600 font-medium text-sm">
-View All Announcements
-</a>
-</div>
-<?php endif; ?>
-</div>
-</div>
 
 <div class="order-1 md:order-2 text-center md:text-left">
 <div class="relative inline-block">

@@ -17,7 +17,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $inputPassword = htmlspecialchars($_POST['Password']);
 
     // Check if user exists and get their password and type
-    $stmt = $conn->prepare("SELECT PASSWORD, user_type FROM users WHERE USERNAME = ?");
+    $stmt = $conn->prepare("SELECT PASSWORD, user_type, ID_NUMBER FROM users WHERE USERNAME = ?");
     $stmt->bind_param("s", $inputUsername);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -32,6 +32,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $_SESSION['username'] = $inputUsername;
             $_SESSION['user_type'] = $userType;
             
+            // Store the user ID_NUMBER in session
+            $_SESSION['user_id'] = $user['ID_NUMBER'];
+
             // Instead of immediate redirect, return success status
             echo json_encode(['success' => true, 'userType' => $userType]);
             exit();
@@ -52,6 +55,7 @@ $conn->close();
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-green-500">
 
     <!-- Success Modal -->
@@ -68,39 +72,41 @@ $conn->close();
     </div>
 
     <div class="relative bg-white/20 backdrop-blur-md border border-white/100 shadow-2x2 rounded-xl p-8 w-full max-w-md text-center">
-        
-        <!-- Logos -->
-        <div class="flex justify-center items-center space-x-4 mb-6">
-            <img src="images/uc.png" alt="UC Logo" class="h-16">
-            <img src="images/css-new.png" alt="CSS Logo" class="h-14">
-        </div>
 
-        <h2 class="text-2xl font-bold text-white tracking-wide mb-6">CCS Sit-in Monitoring System</h2>
+    <!-- Title -->
+    <h2 class="text-2xl font-bold text-white tracking-wide mb-6">CCS Sit-in Monitoring System</h2>
 
-        <!-- Login Form -->
-        <form method="post" action="">
-            <div class="mb-4">
-                <input type="text" name="Username" placeholder="Username" required
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-black/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400">
-            </div>
-
-            <div class="mb-4">
-                <input type="password" name="Password" placeholder="Password" required
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-black/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400">
-            </div>
-
-            <button type="submit"
-                class="w-full bg-blue-500 text-white font-semibold py-3 rounded-lg hover:bg-green-500 transition duration-300 shadow-md">
-                Login
-            </button>
-        </form>
-
-        <!-- Register Link -->
-        <div class="mt-6 text-sm text-gray-200">
-            Don't have an account? 
-            <a href="register.php" class="text-yellow-400 font-medium hover:underline">Register Here</a>
-        </div>
+    <!-- Logos -->
+    <div class="flex justify-center items-center space-x-4 mb-6">
+        <img src="images/uc.png" alt="UC Logo" class="h-16">
+        <img src="images/css-new.png" alt="CSS Logo" class="h-14">
     </div>
+
+    <!-- Login Form -->
+    <form method="post" action="">
+        <div class="mb-4">
+            <input type="text" name="Username" placeholder="Username" required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-black/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400">
+        </div>
+
+        <div class="mb-4">
+            <input type="password" name="Password" placeholder="Password" required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-black/20 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400">
+        </div>
+
+        <button type="submit"
+            class="w-full bg-blue-500 text-white font-semibold py-3 rounded-lg hover:bg-green-500 transition duration-300 shadow-md">
+            Login
+        </button>
+    </form>
+
+    <!-- Register Link -->
+    <div class="mt-6 text-sm text-gray-200">
+        Don't have an account? 
+        <a href="register.php" class="text-yellow-400 font-medium hover:underline">Register Here</a>
+    </div>
+</div>
+
 
     <script>
         document.querySelector('form').addEventListener('submit', function(e) {
@@ -140,8 +146,6 @@ $conn->close();
             });
         });
     </script>
-    </script>
-    </script>
-    </script>
+
 </body>
 </html>
