@@ -7,30 +7,60 @@ require_once __DIR__ . '/TCPDF-main/tcpdf.php';
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['start_date'], $_POST['end_date'])) {
-    $start_date = $_POST['start_date'];
-    $end_date = $_POST['end_date'];
+// Handle the number of entries to display
+$entries_per_page = isset($_GET['entries']) ? (int)$_GET['entries'] : 10; // Default to 10 entries
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1; // Default to page 1
+$offset = ($page - 1) * $entries_per_page;
 
+// Handle search dates
+$start_date = !empty($_POST['start_date']) ? $_POST['start_date'] : null;
+$end_date = !empty($_POST['end_date']) ? $_POST['end_date'] : null;
+
+// Build the query based on available dates
+if ($end_date && !$start_date) {
+    $query = "
+        SELECT s.*, u.FIRSTNAME, u.LASTNAME 
+        FROM sit_in_sessions s
+        JOIN users u ON s.student_id = u.ID_NUMBER
+        WHERE s.status = 'completed' AND DATE(s.start_time) <= ?
+        ORDER BY s.end_time ASC
+        LIMIT ? OFFSET ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param('sii', $end_date, $entries_per_page, $offset);
+} elseif ($start_date && $end_date) {
     $query = "
         SELECT s.*, u.FIRSTNAME, u.LASTNAME 
         FROM sit_in_sessions s
         JOIN users u ON s.student_id = u.ID_NUMBER
         WHERE s.status = 'completed' AND DATE(s.start_time) BETWEEN ? AND ?
-        ORDER BY s.end_time ASC";
-
+        ORDER BY s.end_time ASC
+        LIMIT ? OFFSET ?";
     $stmt = $conn->prepare($query);
-    $stmt->bind_param('ss', $start_date, $end_date);
-    $stmt->execute();
-    $records = $stmt->get_result();
+    $stmt->bind_param('ssii', $start_date, $end_date, $entries_per_page, $offset);
 } else {
     $query = "
         SELECT s.*, u.FIRSTNAME, u.LASTNAME 
         FROM sit_in_sessions s
         JOIN users u ON s.student_id = u.ID_NUMBER
         WHERE s.status = 'completed'
-        ORDER BY s.end_time ASC";
-    $records = $conn->query($query);
+        ORDER BY s.end_time ASC
+        LIMIT ? OFFSET ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param('ii', $entries_per_page, $offset);
 }
+
+$stmt->execute();
+$records = $stmt->get_result();
+
+// Get the total number of records for pagination
+$total_query = "
+    SELECT COUNT(*) AS total
+    FROM sit_in_sessions s
+    JOIN users u ON s.student_id = u.ID_NUMBER
+    WHERE s.status = 'completed'";
+$total_result = $conn->query($total_query);
+$total_records = $total_result->fetch_assoc()['total'];
+$total_pages = ceil($total_records / $entries_per_page);
 
 if (isset($_GET['export'])) {
     $exportType = $_GET['export'];
@@ -50,8 +80,10 @@ if (isset($_GET['export'])) {
 
         $output = fopen('php://output', 'w');
 
-        // Add title
-        fputcsv($output, ['CCS SIT-IN REPORTS']);
+        // Add title, subtitle, and generated date
+        fputcsv($output, ['UNIVERSITY OF CEBU']);
+        fputcsv($output, ['College of Computer Studies']);
+        fputcsv($output, ['Generated on: ' . date("Y-m-d h:i:sa")]);
         fputcsv($output, []); // Empty row for spacing
 
         // Add headers
@@ -102,61 +134,104 @@ if (isset($_GET['export'])) {
         echo "</table>";
         exit();
     } elseif ($exportType === 'pdf') {
+        // Use the current entries_per_page and page settings for PDF export
+        $entries_per_page = isset($_GET['entries']) ? (int)$_GET['entries'] : 10;
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $offset = ($page - 1) * $entries_per_page;
+
+        // Fetch records with pagination for PDF
+        $pdf_query = "
+            SELECT s.*, u.FIRSTNAME, u.LASTNAME 
+            FROM sit_in_sessions s
+            JOIN users u ON s.student_id = u.ID_NUMBER
+            WHERE s.status = 'completed'
+            ORDER BY s.end_time ASC
+            LIMIT ? OFFSET ?";
+        $pdf_stmt = $conn->prepare($pdf_query);
+        $pdf_stmt->bind_param('ii', $entries_per_page, $offset);
+        $pdf_stmt->execute();
+        $pdf_records = $pdf_stmt->get_result();
+
         require_once __DIR__ . '/TCPDF-main/tcpdf.php';
 
-        $pdf = new TCPDF('P', 'mm', 'LETTER', true, 'UTF-8', false); // Set page size to Letter
-        $pdf->SetMargins(15, 10, 15); // Adjust margins for proper layout
-        $pdf->SetAutoPageBreak(true, 10); // Enable auto page break with bottom margin
+        $pdf = new TCPDF('L', 'mm', 'LETTER', true, 'UTF-8', false);
+        $pdf->SetMargins(15, 10, 15);
+        $pdf->SetAutoPageBreak(true, 10);
         $pdf->AddPage();
 
-        $pdf->Image('images/uc.png', 15, 10, 30, 0, '', '', '', false, 300, '', false, false, 0, false, false, false);
-        $pdf->Image('images/css-new.png', 175, 10, 20, 0, '', '', '', false, 300, '', false, false, 0, false, false, false);
-        $pdf->Ln(20); // Adjust spacing after the images
+        // Get current date and time
+        $generatedDate = date("Y-m-d h:i:sa");
 
-        $pdf->SetFont('helvetica', 'B', 16); // Set font to bold and size to 16 for the title
-        $pdf->Cell(0, 10, 'CCS SIT-IN REPORTS', 0, 1, 'C'); // Center the title
-        $pdf->Ln(5); // Adjust spacing after the title
+        // Define the absolute path to the image
+        $imagePath = __DIR__ . '/images/uc.png';
 
-        $pdf->SetFont('helvetica', '', 12); // Set font to normal for table headers and data
-
-        $html = "<table cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; font-size: 12px;'>
-        <thead style='background-color: #f4f4f4;'>
-        <tr>
-        <th>ID Number</th>
-        <th>Name</th>
-        <th>Purpose</th>
-        <th>Laboratory</th>
-        <th>Login</th>
-        <th>Logout</th>
-        <th>Date</th>
-        </tr>
-        </thead>
-        <tbody>";
-
-        while ($row = $records->fetch_assoc()) {
-            $html .= "<tr>";
-            $html .= "<td>{$row['student_id']}</td>";
-            $html .= "<td>{$row['FIRSTNAME']} {$row['LASTNAME']}</td>";
-            $html .= "<td>{$row['purpose']}</td>";
-            $html .= "<td>{$row['lab_room']}</td>";
-            $html .= "<td>" . date("h:i:sa", strtotime($row['start_time'])) . "</td>";
-            $html .= "<td>" . date("h:i:sa", strtotime($row['end_time'])) . "</td>";
-            $html .= "<td>" . date("Y-m-d", strtotime($row['start_time'])) . "</td>";
-            $html .= "</tr>";
+        // Check if the image exists
+        if (!file_exists($imagePath)) {
+            $imagePath = '';
         }
 
-        $html .= "</tbody></table>";
+        // Define the HTML content
+        $html = '
+        <div style="text-align: center; font-family: Arial, sans-serif; font-size: 14px;">
+            ' . ($imagePath ? '<img src="' . $imagePath . '" height="70" style="margin-bottom: 10px;">' : '') . '
+            <h1 style="margin: 0;">UNIVERSITY OF CEBU</h1>
+            <h2 style="margin: 0;">College of Computer Studies</h2>
+            <p style="margin: 0;">Generated on: ' . $generatedDate . '</p>
+        </div>
+        <table style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; font-size: 12px; margin-top: 20px;">
+            <thead style="background-color: #f4f4f4;">
+                <tr>
+                    <th style="border: 1px solid #ddd; padding: 8px;">ID Number</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">Name</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">Purpose</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">Laboratory</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">Login</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">Logout</th>
+                    <th style="border: 1px solid #ddd; padding: 8px;">Date</th>
+                </tr>
+            </thead>
+            <tbody>';
+
+        while ($row = $pdf_records->fetch_assoc()) {
+            $html .= '
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;">' . htmlspecialchars($row['student_id']) . '</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">' . htmlspecialchars($row['FIRSTNAME'] . ' ' . $row['LASTNAME']) . '</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">' . htmlspecialchars($row['purpose']) . '</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">' . htmlspecialchars($row['lab_room']) . '</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">' . date("h:i:sa", strtotime($row['start_time'])) . '</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">' . date("h:i:sa", strtotime($row['end_time'])) . '</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">' . date("Y-m-d", strtotime($row['start_time'])) . '</td>
+                </tr>';
+        }
+
+        $html .= '
+            </tbody>
+        </table>';
+
         $pdf->writeHTML($html, true, false, true, false, '');
         $pdf->Output('sit_in_reports.pdf', 'D');
         exit();
     } elseif ($exportType === 'print') {
-        echo "<div style='text-align: center; font-family: Arial, sans-serif; font-size: 14px;'>
-                <img src='images/uc.png' height='100' style='margin-bottom: 10px; float: left;'>
-                <img src='images/css-new.png' height='' style='margin-bottom: 10px; float: right;'>
-                <h1 style='clear: both;'>CCS SIT-IN REPORTS</h1>
-              </div>";
-        echo "<table border='1' style='border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; font-size: 12px;'>";
-        echo "<thead style='background-color: #f4f4f4;'>
+        $generatedDate = date("Y-m-d h:i:sa");
+        
+        // Define the absolute path to the image
+        $imagePath = __DIR__ . '/images/uc.png';
+
+        // Check if the image exists
+        if (!file_exists($imagePath)) {
+            $imagePath = '';
+        }
+
+        echo "
+        <div style='text-align: center; font-family: Arial, sans-serif; font-size: 14px;'>
+            " . ($imagePath ? "<img src='" . $imagePath . "' height='70' style='margin-bottom: 10px;'>" : "") . "
+            <h1 style='margin: 0;'>UNIVERSITY OF CEBU</h1>
+            <h2 style='margin: 0;'>College of Computer Studies</h2>
+            <p style='margin: 0;'>Generated on: $generatedDate</p>
+        </div>
+        <table border='1' style='border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; font-size: 12px; margin-top: 20px;'>
+            <thead style='background-color: #f4f4f4;'>
                 <tr>
                     <th>ID Number</th>
                     <th>Name</th>
@@ -166,21 +241,26 @@ if (isset($_GET['export'])) {
                     <th>Logout</th>
                     <th>Date</th>
                 </tr>
-              </thead>";
+            </thead>
+            <tbody>";
 
         while ($row = $records->fetch_assoc()) {
-            echo "<tr>";
-            echo "<td>{$row['student_id']}</td>";
-            echo "<td>{$row['FIRSTNAME']} {$row['LASTNAME']}</td>";
-            echo "<td>{$row['purpose']}</td>";
-            echo "<td>{$row['lab_room']}</td>";
-            echo "<td>" . date("h:i:sa", strtotime($row['start_time'])) . "</td>";
-            echo "<td>" . date("h:i:sa", strtotime($row['end_time'])) . "</td>";
-            echo "<td>" . date("Y-m-d", strtotime($row['start_time'])) . "</td>";
-            echo "</tr>";
+            echo "
+                <tr>
+                    <td>{$row['student_id']}</td>
+                    <td>{$row['FIRSTNAME']} {$row['LASTNAME']}</td>
+                    <td>{$row['purpose']}</td>
+                    <td>{$row['lab_room']}</td>
+                    <td>" . date("h:i:sa", strtotime($row['start_time'])) . "</td>
+                    <td>" . date("h:i:sa", strtotime($row['end_time'])) . "</td>
+                    <td>" . date("Y-m-d", strtotime($row['start_time'])) . "</td>
+                </tr>";
         }
-        echo "</table>";
-        echo "<script>window.print();</script>";
+
+        echo "
+            </tbody>
+        </table>
+        <script>window.print();</script>";
         exit();
     }
 }
@@ -191,34 +271,95 @@ if (isset($_GET['export'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generate Reports</title>
+    <title>Sit-in Reports</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script> 
     <script>
         function printReport() {
+            const originalContent = document.body.innerHTML; 
             const printContent = document.getElementById('reportTable').outerHTML;
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                <html>
-                <head>
-                    <title>Print Report</title>
-                    <style>
-                        table { border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; font-size: 12px; }
-                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                        th { background-color: #f4f4f4; }
-                    </style>
-                </head>
-                <body>
-                    <div style="text-align: center; font-family: Arial, sans-serif; font-size: 14px;">
-                        <img src="images/uc.png" height="50" style="margin-bottom: 10px; float: left;">
-                        <img src="images/css-new.png" height="50" style="margin-bottom: 10px; float: right;">
-                        <h1 style="clear: both;">CCS SIT-IN REPORTS</h1>
-                    </div>
-                    ${printContent}
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
-            printWindow.print();
+
+                document.body.innerHTML = `
+            <div style="text-align: center; font-family: Arial, sans-serif; font-size: 14px;">
+                <img src="css-sit-in/images/uc.png" style="margin-bottom: 10px; width: 150px; height: auto;" onerror="this.onerror=null; this.src='images/uc.png';">
+                <h1 style="margin: 0;">UNIVERSITY OF CEBU</h1>
+                <h2 style="margin: 0;">College of Computer Studies</h2>
+                <p style="margin: 0;">Generated on: ${new Date().toLocaleString()}</p>
+            </div>
+            ${printContent}
+            `;
+
+            window.print(); 
+            document.body.innerHTML = originalContent; 
+        }
+
+        function exportToExcel() {
+           
+            const workbook = XLSX.utils.book_new();
+            const worksheetData = [];
+
+            
+            worksheetData.push(['UNIVERSITY OF CEBU']);
+            worksheetData.push(['College of Computer Studies']);
+            worksheetData.push([`Generated on: ${new Date().toLocaleString()}`]);
+            worksheetData.push([]); 
+
+            // Add headers
+            worksheetData.push(['ID Number', 'Name', 'Purpose', 'Laboratory', 'Login', 'Logout', 'Date']);
+
+            // Add table data
+            const rows = document.querySelectorAll('#reportTable tbody tr');
+            rows.forEach(row => {
+                const rowData = Array.from(row.querySelectorAll('td')).map(cell => cell.innerText);
+                worksheetData.push(rowData);
+            });
+
+            // Create worksheet and append to workbook
+            const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+
+            // Adjust column widths for better readability
+            const columnWidths = [
+                { wch: 15 }, // ID Number
+                { wch: 25 }, // Name
+                { wch: 20 }, // Purpose
+                { wch: 20 }, // Laboratory
+                { wch: 15 }, // Login
+                { wch: 15 }, // Logout
+                { wch: 15 }  // Date
+            ];
+            worksheet['!cols'] = columnWidths;
+
+            // Merge cells for title, subtitle, and generated date
+            worksheet['!merges'] = [
+                { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }, // Merge title row
+                { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } }, // Merge subtitle row
+                { s: { r: 2, c: 0 }, e: { r: 2, c: 6 } }  // Merge generated date row
+            ];
+
+            // Center-align title, subtitle, and generated date
+            ['A1', 'A2', 'A3'].forEach(cell => {
+                if (!worksheet[cell]) return;
+                worksheet[cell].s = {
+                    alignment: { horizontal: 'center', vertical: 'center' },
+                    font: { bold: true }
+                };
+            });
+
+            // Center-align all headers and data
+            const range = XLSX.utils.decode_range(worksheet['!ref']);
+            for (let row = range.s.r; row <= range.e.r; row++) {
+                for (let col = range.s.c; col <= range.e.c; col++) {
+                    const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+                    if (!worksheet[cellAddress]) continue; // Skip empty cells
+                    if (!worksheet[cellAddress].s) worksheet[cellAddress].s = {};
+                    worksheet[cellAddress].s.alignment = { horizontal: 'center', vertical: 'center' };
+                }
+            }
+
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+
+            // Export the workbook to an .xlsx file
+            XLSX.writeFile(workbook, 'sit_in_reports.xlsx');
         }
     </script>
 </head>
@@ -226,7 +367,7 @@ if (isset($_GET['export'])) {
     <?php include 'admin-nav.php'; ?>
 
     <div class="max-w-7xl mx-auto p-6">
-        <h2 class="text-2xl font-bold text-center mb-6">Generate Reports</h2>
+        <h2 class="text-2xl font-bold text-center mb-6">Sit-in Reports</h2>
 
         <div class="flex justify-between items-center mb-4">
             <!-- Search & Filter Section -->
@@ -237,9 +378,22 @@ if (isset($_GET['export'])) {
                 <a href="sit-in-reports.php" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Reset</a>
             </form>
 
+            <!-- Entries Dropdown -->
+            <form method="GET" class="flex items-center gap-2">
+                <label for="entries" class="text-sm font-medium">Show</label>
+                <select name="entries" id="entries" class="border rounded px-3 py-2" onchange="this.form.submit()">
+                    <option value="10" <?= $entries_per_page == 10 ? 'selected' : '' ?>>10</option>
+                    <option value="25" <?= $entries_per_page == 25 ? 'selected' : '' ?>>25</option>
+                    <option value="50" <?= $entries_per_page == 50 ? 'selected' : '' ?>>50</option>
+                    <option value="100" <?= $entries_per_page == 100 ? 'selected' : '' ?>>100</option>
+                </select>
+                <span class="text-sm font-medium">entries</span>
+            </form>
+
             <!-- Export Buttons -->
             <div class="flex gap-2">
-                <a href="?export=excel" class="bg-green-600 text-white px-3 py-2 rounded">Excel</a>
+                <a href="#" onclick="exportToExcel()" class="bg-green-600 text-white px-3 py-2 rounded">Excel</a>
+                <a href="?export=csv" class="bg-purple-600 text-white px-3 py-2 rounded">CSV</a>
                 <a href="?export=pdf" class="bg-red-700 text-white px-3 py-2 rounded">PDF</a>
                 <a href="#" onclick="printReport()" class="bg-black text-white px-3 py-2 rounded">Print</a>
             </div>
@@ -278,6 +432,17 @@ if (isset($_GET['export'])) {
                 </div> <!-- Close wrapper div -->
             </div>
         </div>
+
+        <!-- Pagination -->
+        <div class="flex justify-center mt-4">
+            <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                <a href="?entries=<?= $entries_per_page ?>&page=<?= $i ?>" class="px-3 py-2 mx-1 border rounded <?= $i == $page ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700' ?>">
+                    <?= $i ?>
+                </a>
+            <?php endfor; ?>
+        </div>
     </div>
 </body>
 </html>
+</html>
+

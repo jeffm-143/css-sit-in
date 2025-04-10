@@ -3,18 +3,34 @@ session_start();
 require_once 'database.php';
 
 // Handle filters
-$start_date = isset($_POST['start_date']) ? $_POST['start_date'] : date('Y-m-d', strtotime('-7 days'));
-$end_date = isset($_POST['end_date']) ? $_POST['end_date'] : date('Y-m-d');
+$start_date = !empty($_POST['start_date']) ? $_POST['start_date'] : null;
+$end_date = !empty($_POST['end_date']) ? $_POST['end_date'] : null;
 
-// Update the query to order by sit-in ID
-$query = "SELECT s.*, u.FIRSTNAME, u.LASTNAME, u.COURSE, u.YEAR 
-          FROM sit_in_sessions s
-          JOIN users u ON s.student_id = u.ID_NUMBER
-          WHERE DATE(s.start_time) BETWEEN ? AND ?
-          ORDER BY s.id ASC";
+// Build the query based on available dates
+if ($end_date && !$start_date) {
+    $query = "SELECT s.*, u.FIRSTNAME, u.LASTNAME, u.COURSE, u.YEAR 
+              FROM sit_in_sessions s
+              JOIN users u ON s.student_id = u.ID_NUMBER
+              WHERE DATE(s.start_time) <= ?
+              ORDER BY s.id ASC";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("s", $end_date);
+} elseif ($start_date && $end_date) {
+    $query = "SELECT s.*, u.FIRSTNAME, u.LASTNAME, u.COURSE, u.YEAR 
+              FROM sit_in_sessions s
+              JOIN users u ON s.student_id = u.ID_NUMBER
+              WHERE DATE(s.start_time) BETWEEN ? AND ?
+              ORDER BY s.id ASC";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("ss", $start_date, $end_date);
+} else {
+    $query = "SELECT s.*, u.FIRSTNAME, u.LASTNAME, u.COURSE, u.YEAR 
+              FROM sit_in_sessions s
+              JOIN users u ON s.student_id = u.ID_NUMBER
+              ORDER BY s.id ASC";
+    $stmt = $conn->prepare($query);
+}
 
-$stmt = $conn->prepare($query);
-$stmt->bind_param("ss", $start_date, $end_date);
 $stmt->execute();
 $sessions = $stmt->get_result();
 

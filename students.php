@@ -17,10 +17,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param("sssisi", $id_number, $firstname, $lastname, $year, $course, $id);
 
         if ($stmt->execute()) {
-            echo "<script>alert('Student updated successfully!'); window.location.href='students.php';</script>";
+            $_SESSION['alert'] = ['title' => 'Success', 'message' => 'Student updated successfully!'];
         } else {
-            echo "<script>alert('Error updating student.');</script>";
+            $_SESSION['alert'] = ['title' => 'Error', 'message' => 'Error updating student.'];
         }
+        header('Location: students.php');
+        exit();
     }
 
     // Delete Student
@@ -34,41 +36,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $active_sessions = $check_stmt->get_result()->fetch_row()[0];
 
         if ($active_sessions > 0) {
-            echo "<script>alert('Cannot delete student with active sessions.');</script>";
+            $_SESSION['alert'] = ['title' => 'Error', 'message' => 'Cannot delete student with active sessions.'];
         } else {
             $stmt = $conn->prepare("DELETE FROM users WHERE ID = ? AND user_type = 'student'");
             $stmt->bind_param("i", $id);
 
             if ($stmt->execute()) {
-                echo "<script>alert('Student deleted successfully!'); window.location.href='students.php';</script>";
+                $_SESSION['alert'] = ['title' => 'Success', 'message' => 'Student deleted successfully!'];
             } else {
-                echo "<script>alert('Error deleting student.');</script>";
+                $_SESSION['alert'] = ['title' => 'Error', 'message' => 'Error deleting student.'];
             }
         }
+        header('Location: students.php');
+        exit();
     }
 
     // Reset All Sessions
     if (isset($_POST['reset_sessions'])) {
-        $stmt = $conn->prepare("UPDATE users SET SESSION = 30 WHERE user_type = 'student'");
-        if ($stmt->execute()) {
-            echo "<script>alert('All student sessions have been reset!'); window.location.href='students.php';</script>";
+        // Check if all students already have the maximum session
+        $check_stmt = $conn->prepare("SELECT COUNT(*) AS total_students, SUM(CASE WHEN SESSION = 30 THEN 1 ELSE 0 END) AS max_sessions FROM users WHERE user_type = 'student'");
+        $check_stmt->execute();
+        $result = $check_stmt->get_result()->fetch_assoc();
+
+        if ($result['total_students'] == $result['max_sessions']) {
+            $_SESSION['alert'] = ['title' => 'Information', 'message' => 'All students already have the maximum session (30).'];
         } else {
-            echo "<script>alert('Error resetting sessions.');</script>";
+            $stmt = $conn->prepare("UPDATE users SET SESSION = 30 WHERE user_type = 'student'");
+            if ($stmt->execute()) {
+                $_SESSION['alert'] = ['title' => 'Success', 'message' => 'All student sessions have been reset!'];
+            } else {
+                $_SESSION['alert'] = ['title' => 'Error', 'message' => 'Error resetting sessions.'];
+            }
         }
+        header('Location: students.php');
+        exit();
     }
 
     // Reset Individual Student Session
     if (isset($_POST['reset_student_session'])) {
         $id = $_POST['id'];
 
-        $stmt = $conn->prepare("UPDATE users SET SESSION = 30 WHERE ID = ? AND user_type = 'student'");
-        $stmt->bind_param("i", $id);
+        // Check if the session is already at the maximum
+        $check_stmt = $conn->prepare("SELECT SESSION FROM users WHERE ID = ? AND user_type = 'student'");
+        $check_stmt->bind_param("i", $id);
+        $check_stmt->execute();
+        $current_session = $check_stmt->get_result()->fetch_assoc()['SESSION'];
 
-        if ($stmt->execute()) {
-            echo "<script>alert('Student session reset successfully!'); window.location.href='students.php';</script>";
+        if ($current_session >= 30) {
+            $_SESSION['alert'] = ['title' => 'Information', 'message' => 'This student already has the maximum session (30).'];
         } else {
-            echo "<script>alert('Error resetting session.');</script>";
+            $stmt = $conn->prepare("UPDATE users SET SESSION = 30 WHERE ID = ? AND user_type = 'student'");
+            $stmt->bind_param("i", $id);
+
+            if ($stmt->execute()) {
+                $_SESSION['alert'] = ['title' => 'Success', 'message' => 'Student session reset successfully!'];
+            } else {
+                $_SESSION['alert'] = ['title' => 'Error', 'message' => 'Error resetting session.'];
+            }
         }
+        header('Location: students.php');
+        exit();
     }
 }
 
@@ -87,7 +114,7 @@ $result = $conn->query($query);
 </head>
 <body class="bg-gray-100">
     <?php include 'admin-nav.php'; ?>
-    <div class="max-w-7xl mx-auto p-6 ">
+    <div class="max-w-7xl mx-auto p-6">
         <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-2xl font-bold mb-6 text-center">Students Information</h2>
 
@@ -100,7 +127,7 @@ $result = $conn->query($query);
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full border-collapse bg-white text-left text-sm ">
+                <table class="w-full border-collapse bg-white text-left text-sm">
                     <thead class="bg-gray-200">
                         <tr class="text-center">
                             <th class="p-3">ID Number</th>
@@ -190,7 +217,30 @@ $result = $conn->query($query);
         </div>
     </div>
 
+    <!-- Alert Modal -->
+    <div id="alertModal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-96">
+            <h3 id="alertTitle" class="text-lg font-bold mb-4 text-center">Alert</h3>
+            <p id="alertMessage" class="text-sm text-gray-700 mb-6 text-center"></p>
+            <div class="flex justify-center">
+                <button onclick="closeAlertModal()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        function showAlertModal(title, message) {
+            document.getElementById('alertTitle').innerText = title;
+            document.getElementById('alertMessage').innerText = message;
+            document.getElementById('alertModal').classList.remove('hidden');
+        }
+
+        function closeAlertModal() {
+            document.getElementById('alertModal').classList.add('hidden');
+        }
+
         function editStudent(student) {
             document.getElementById('edit_id').value = student.ID;
             document.getElementById('edit_id_number').value = student.ID_NUMBER;
@@ -206,30 +256,35 @@ $result = $conn->query($query);
         }
 
         function deleteStudent(id) {
-            if (confirm('Are you sure you want to delete this student?')) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.innerHTML = `
-                    <input type="hidden" name="delete_student" value="1">
-                    <input type="hidden" name="id" value="${id}">
-                `;
-                document.body.appendChild(form);
-                form.submit();
-            }
+            showAlertModal('Delete Student', 'Are you sure you want to delete this student?');
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = `
+                <input type="hidden" name="delete_student" value="1">
+                <input type="hidden" name="id" value="${id}">
+            `;
+            document.body.appendChild(form);
+            form.submit();
         }
 
         function resetSession(id) {
-            if (confirm('Are you sure you want to reset this student\'s session?')) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.innerHTML = `
-                    <input type="hidden" name="reset_student_session" value="1">
-                    <input type="hidden" name="id" value="${id}">
-                `;
-                document.body.appendChild(form);
-                form.submit();
-            }
+            showAlertModal('Reset Session', 'Are you sure you want to reset this student\'s session?');
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = `
+                <input type="hidden" name="reset_student_session" value="1">
+                <input type="hidden" name="id" value="${id}">
+            `;
+            document.body.appendChild(form);
+            form.submit();
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            <?php if (isset($_SESSION['alert'])): ?>
+                showAlertModal('<?php echo $_SESSION['alert']['title']; ?>', '<?php echo $_SESSION['alert']['message']; ?>');
+                <?php unset($_SESSION['alert']); ?>
+            <?php endif; ?>
+        });
     </script>
 </body>
 </html>
