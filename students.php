@@ -89,7 +89,7 @@ $result = $conn->query($query);
     <?php include 'admin-nav.php'; ?>
     <div class="max-w-7xl mx-auto p-6 ">
         <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-2xl font-bold mb-6">Students Information</h2>
+            <h2 class="text-2xl font-bold mb-6 text-center">Students Information</h2>
 
             <div class="flex mb-4">
                 <form method="POST" class="flex gap-2">

@@ -17,7 +17,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $inputPassword = htmlspecialchars($_POST['Password']);
 
     // Check if user exists and get their password and type
-    $stmt = $conn->prepare("SELECT PASSWORD, user_type, ID_NUMBER FROM users WHERE USERNAME = ?");
+    $stmt = $conn->prepare("SELECT PASSWORD, user_type, ID FROM users WHERE USERNAME = ?");
     $stmt->bind_param("s", $inputUsername);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -31,16 +31,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if (password_verify($inputPassword, $hashedPassword)) {
             $_SESSION['username'] = $inputUsername;
             $_SESSION['user_type'] = $userType;
-            
-            // Store the user ID_NUMBER in session
-            $_SESSION['user_id'] = $user['ID_NUMBER'];
+            $_SESSION['user_id'] = $user['ID'];
 
-            // Instead of immediate redirect, return success status
-            echo json_encode(['success' => true, 'userType' => $userType]);
+            $_SESSION['success_message'] = 'Login successful!';
+            header('Location: ' . ($userType === 'admin' ? 'admin-dashboard.php' : 'dashboard.php'));
             exit();
+        } else {
+            $_SESSION['error_message'] = 'Invalid username or password.';
         }
+    } else {
+        $_SESSION['error_message'] = 'Invalid username or password.';
     }
-    $error = "Invalid username or password.";
     $stmt->close();
 }
 $conn->close();
@@ -58,18 +59,62 @@ $conn->close();
 
 <body class="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-green-500">
 
-    <!-- Success Modal -->
-    <div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-8 max-w-sm mx-auto">
-            <div class="text-center">
-                <svg class="mx-auto mb-4 w-14 h-14 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                </svg>
-                <h3 class="text-xl font-bold text-gray-900 mb-2">Login Successful!</h3>
-                <p class="text-gray-500 mb-4">You will be redirected to the dashboard.</p>
+    <!-- Display success or error messages using modals -->
+    <?php if (isset($_SESSION['success_message']) || isset($_SESSION['error_message'])): ?>
+        <div id="messageModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div class="bg-white rounded-lg shadow-lg w-96">
+                <div class="flex items-center justify-between p-4 border-b">
+                    <h3 class="text-lg font-bold <?php echo isset($_SESSION['success_message']) ? 'text-green-600' : 'text-red-600'; ?>">
+                        <?php echo isset($_SESSION['success_message']) ? 'Success' : 'Error'; ?>
+                    </h3>
+                    <button id="closeMessageModal" class="text-gray-400 hover:text-gray-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-4">
+                    <p class="text-gray-700">
+                        <?php 
+                        if (isset($_SESSION['success_message'])) {
+                            echo $_SESSION['success_message']; 
+                            unset($_SESSION['success_message']);
+                        } elseif (isset($_SESSION['error_message'])) {
+                            echo $_SESSION['error_message']; 
+                            unset($_SESSION['error_message']);
+                        }
+                        ?>
+                    </p>
+                </div>
+                <div class="flex justify-end p-4 border-t">
+                    <button id="dismissMessageModal" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">Dismiss</button>
+                </div>
             </div>
         </div>
-    </div>
+        <script>
+            const messageModal = document.getElementById('messageModal');
+            const closeMessageModal = document.getElementById('closeMessageModal');
+            const dismissMessageModal = document.getElementById('dismissMessageModal');
+
+            closeMessageModal.addEventListener('click', () => {
+                messageModal.classList.add('hidden');
+            });
+
+            dismissMessageModal.addEventListener('click', () => {
+                messageModal.classList.add('hidden');
+            });
+
+            setTimeout(() => {
+                messageModal.classList.add('hidden');
+            }, 5000); // Automatically hide after 5 seconds
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    messageModal.classList.add('hidden');
+                }
+            });
+        </script>
+    <?php endif; ?>
 
     <div class="relative bg-white/20 backdrop-blur-md border border-white/100 shadow-2x2 rounded-xl p-8 w-full max-w-md text-center">
 
@@ -110,40 +155,11 @@ $conn->close();
 
     <script>
         document.querySelector('form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            fetch('', {
-                method: 'POST',
-                body: new FormData(this)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const modal = document.getElementById('successModal');
-                    modal.classList.remove('hidden');
-                    modal.classList.add('flex');
-                    
-                    const modalContent = modal.querySelector('.text-center');
-                    let okButton = modalContent.querySelector('button');
+            // Remove the preventDefault to allow normal form submission
+            // e.preventDefault();
 
-                    if (!okButton) {
-                        okButton = document.createElement('button');
-                        okButton.textContent = 'OK';
-                        okButton.className = 'mt-4 bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-500 transition duration-300';
-                        okButton.addEventListener('click', () => {
-                            window.location.href = data.userType === 'admin' ? 'admin-dashboard.php' : 'dashboard.php';
-                        });
-                        modalContent.appendChild(okButton);
-                    }
-                    const enterKeyListener = function(event) {
-                        if (event.key === 'Enter') {
-                            window.location.href = data.userType === 'admin' ? 'admin-dashboard.php' : 'dashboard.php';
-                        }
-                    };
-                    document.removeEventListener('keydown', enterKeyListener);
-                    document.addEventListener('keydown', enterKeyListener);
-                }
-            });
+            // Ensure the form submits properly
+            this.submit();
         });
     </script>
 

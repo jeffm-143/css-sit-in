@@ -3,8 +3,8 @@ session_start();
 require_once 'database.php';
 
 // Handle filters
-$start_date = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-d', strtotime('-7 days'));
-$end_date = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d');
+$start_date = isset($_POST['start_date']) ? $_POST['start_date'] : date('Y-m-d', strtotime('-7 days'));
+$end_date = isset($_POST['end_date']) ? $_POST['end_date'] : date('Y-m-d');
 
 // Update the query to order by sit-in ID
 $query = "SELECT s.*, u.FIRSTNAME, u.LASTNAME, u.COURSE, u.YEAR 
@@ -68,21 +68,12 @@ if (empty($lab_counts)) {
         </div>
 
         <!-- Filters -->
-        <form method="GET" class="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Start Date</label>
-                <input type="date" name="start_date" value="<?php echo $start_date; ?>" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700">End Date</label>
-                <input type="date" name="end_date" value="<?php echo $end_date; ?>" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-            </div>
-            <div class="flex items-end">
-                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Filter</button>
-                <button type="button" id="resetBtn" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">Reset</button>
-            </div>
+        <form method="POST" class="flex gap-4">
+            <input type="date" name="start_date" class="border rounded px-3 py-2" value="<?php echo isset($_POST['start_date']) ? $_POST['start_date'] : ''; ?>">
+            <input type="date" name="end_date" class="border rounded px-3 py-2" value="<?php echo isset($_POST['end_date']) ? $_POST['end_date'] : ''; ?>">
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Search</button>
+            <a href="view-sit-in.php" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Reset</a>
         </form>
-
 
         <!-- Table -->
         <div class="overflow-x-auto">

@@ -86,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="max-w-7xl mx-auto p-6">
         <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-2xl font-bold mb-6">Current Sit in</h2>
+            <h2 class="text-2xl font-bold mb-6 text-center">Current Sit in</h2>
             
             <?php if ($active_sessions->num_rows > 0): ?>
                 <div class="overflow-x-auto">

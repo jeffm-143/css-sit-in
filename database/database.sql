@@ -62,6 +62,10 @@ CREATE TABLE feedback (
     FOREIGN KEY (session_id) REFERENCES sit_in_sessions(id)
 );
 
+ALTER TABLE feedback
+ADD COLUMN user_id INT NOT NULL AFTER session_id,
+ADD CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES users(ID);
+
 ------------------------------------------------------------------------CORRECTED DATABASE.SQL FILE----------------------------------------------------------------------------------------------------------------------------
 ALTER TABLE users 
 MODIFY COLUMN SESSION INT DEFAULT 30;
@@ -115,6 +119,10 @@ CREATE TABLE feedback (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (session_id) REFERENCES sit_in_sessions(id)
 );
+
+ALTER TABLE feedback
+ADD COLUMN user_id INT NOT NULL AFTER session_id,
+ADD CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES users(ID);
 
 INSERT INTO users (ID_NUMBER, LASTNAME, FIRSTNAME, USERNAME, PASSWORD, user_type, EMAIL) 
 VALUES (
