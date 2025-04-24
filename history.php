@@ -93,38 +93,43 @@ $result = $stmt->get_result();
 </header>
 
 <!-- Main Content -->
-<div class="container mx-auto p-6">
-    <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Your Sit-in Session History</h2>
+<div class="container mx-auto p-6 max-w-7xl">
+    <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">Your Sit-in Session History</h2>
 
     <?php if ($result->num_rows > 0): ?>
-        <div class="overflow-x-auto">
-            <table class="min-w-full table-auto bg-white shadow-lg rounded-lg overflow-hidden">
-                <thead class="bg-gray-300">
+        <div class="overflow-hidden shadow-xl rounded-lg border border-gray-200">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-4 py-2">ID</th>
-                        <th class="px-4 py-2">Name</th>
-                        <th class="px-4 py-2">Purpose</th>
-                        <th class="px-4 py-2">Lab Room</th>
-                        <th class="px-4 py-2">Start Time</th>
-                        <th class="px-4 py-2">End Time</th>
-                        <th class="px-4 py-2">Status</th>
-                        <th class="px-4 py-2">Action</th>
+                        <th scope="col" class="px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                        <th scope="col" class="px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th scope="col" class="px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Purpose</th>
+                        <th scope="col" class="px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Lab Room</th>
+                        <th scope="col" class="px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Start Time</th>
+                        <th scope="col" class="px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">End Time</th>
+                        <th scope="col" class="px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th scope="col" class="px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="bg-white divide-y divide-gray-200">
                     <?php while ($row = $result->fetch_assoc()): ?>
-                        <tr class="border-b hover:bg-gray-50">
-                            <td class="px-4 py-2 text-gray-800 text-center"><?php echo htmlspecialchars($row['ID_NUMBER']); ?></td>
-                            <td class="px-4 py-2 text-gray-800 text-center"><?php echo htmlspecialchars($row['Name']); ?></td>
-                            <td class="px-4 py-2 text-gray-800 text-center"><?php echo nl2br(htmlspecialchars(str_replace("\r\n", "\n", $row['purpose']))); ?></td>
-                            <td class="px-4 py-2 text-gray-800 text-center"><?php echo nl2br(htmlspecialchars(str_replace("\r\n", "\n", $row['lab_room']))); ?></td>
-                            <td class="px-4 py-2 text-gray-800 text-center"><?php echo nl2br(htmlspecialchars(str_replace("\r\n", "\n", $row['start_time']))); ?></td>
-                            <td class="px-4 py-2 text-gray-800 text-center"><?php echo nl2br(htmlspecialchars(str_replace("\r\n", "\n", $row['end_time']))); ?></td>
-                            <td class="px-4 py-2 text-gray-800 text-center"><?php echo nl2br(htmlspecialchars(str_replace("\r\n", "\n", $row['status']))); ?></td>
-                            <td class="px-4 py-2 text-center">
+                        <tr class="hover:bg-gray-50 transition-colors duration-200">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($row['ID_NUMBER']); ?></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($row['Name']); ?></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo nl2br(htmlspecialchars(str_replace("\r\n", "\n", $row['purpose']))); ?></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo nl2br(htmlspecialchars(str_replace("\r\n", "\n", $row['lab_room']))); ?></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo nl2br(htmlspecialchars(str_replace("\r\n", "\n", $row['start_time']))); ?></td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo nl2br(htmlspecialchars(str_replace("\r\n", "\n", $row['end_time']))); ?></td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                    <?php echo $row['status'] === 'active' ? 'bg-green-100 text-green-800' : 'bg-green-100 text-gray-800'; ?>">
+                                    <?php echo nl2br(htmlspecialchars(str_replace("\r\n", "\n", $row['status']))); ?>
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
                                 <a href="feedback.php?session_id=<?php echo $row['id']; ?>" 
                                    data-session-id="<?php echo $row['id']; ?>"
-                                   class="bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition">
+                                   class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
                                     Feedback
                                 </a>
                             </td>
@@ -134,9 +139,10 @@ $result = $stmt->get_result();
             </table>
         </div>
     <?php else: ?>
-        <p class="text-center text-gray-500 mt-4">No session history found.</p>
+        <div class="text-center py-8">
+            <div class="text-gray-500 text-lg">No session history found.</div>
+        </div>
     <?php endif; ?>
-
 </div>
 
 <!-- Feedback Modal -->
