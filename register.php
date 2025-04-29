@@ -3,7 +3,7 @@
 $host = 'localhost';  
 $username = 'root';  
 $password = '';      
-$dbname = 'css_sit_in'; 
+$dbname = 'ccs-sit-in'; 
 
 $conn = new mysqli($host, $username, $password, $dbname);
 

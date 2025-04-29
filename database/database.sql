@@ -99,7 +99,7 @@ CREATE TABLE sit_in_sessions (
     end_time DATETIME DEFAULT NULL,
     status ENUM('active', 'completed') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (student_id) REFERENCES users(ID_NUMBER)  -- ✅ Now valid
+    FOREIGN KEY (student_id) REFERENCES users(ID_NUMBER) 
 );
 
 CREATE TABLE announcements (
@@ -110,7 +110,7 @@ CREATE TABLE announcements (
     FOREIGN KEY (admin_username) REFERENCES users(USERNAME)
 );
 
--- Feedback table
+
 CREATE TABLE feedback (
     id INT PRIMARY KEY AUTO_INCREMENT,
     session_id INT,
