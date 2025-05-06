@@ -3,32 +3,45 @@ session_start();
 require_once 'database.php';
 
 // Handle filters
-$start_date = !empty($_POST['start_date']) ? $_POST['start_date'] : null;
 $end_date = !empty($_POST['end_date']) ? $_POST['end_date'] : null;
+$purpose_filter = !empty($_POST['purpose']) ? $_POST['purpose'] : null;
+$lab_filter = !empty($_POST['lab']) ? $_POST['lab'] : null;
 
-// Build the query based on available dates
-if ($end_date && !$start_date) {
-    $query = "SELECT s.*, u.FIRSTNAME, u.LASTNAME, u.COURSE, u.YEAR 
-              FROM sit_in_sessions s
-              JOIN users u ON s.student_id = u.ID_NUMBER
-              WHERE DATE(s.start_time) <= ?
-              ORDER BY s.id ASC";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("s", $end_date);
-} elseif ($start_date && $end_date) {
-    $query = "SELECT s.*, u.FIRSTNAME, u.LASTNAME, u.COURSE, u.YEAR 
-              FROM sit_in_sessions s
-              JOIN users u ON s.student_id = u.ID_NUMBER
-              WHERE DATE(s.start_time) BETWEEN ? AND ?
-              ORDER BY s.id ASC";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("ss", $start_date, $end_date);
-} else {
-    $query = "SELECT s.*, u.FIRSTNAME, u.LASTNAME, u.COURSE, u.YEAR 
-              FROM sit_in_sessions s
-              JOIN users u ON s.student_id = u.ID_NUMBER
-              ORDER BY s.id ASC";
-    $stmt = $conn->prepare($query);
+// Get unique purposes and labs for filter dropdowns
+$purposeQuery = "SELECT DISTINCT purpose FROM sit_in_sessions";
+$labQuery = "SELECT DISTINCT lab_room FROM sit_in_sessions";
+$purposes = $conn->query($purposeQuery)->fetch_all(MYSQLI_ASSOC);
+$labs = $conn->query($labQuery)->fetch_all(MYSQLI_ASSOC);
+
+// Build the query based on filters
+$query = "SELECT s.*, u.FIRSTNAME, u.LASTNAME, u.COURSE, u.YEAR 
+          FROM sit_in_sessions s
+          JOIN users u ON s.student_id = u.ID_NUMBER
+          WHERE 1=1";
+$params = [];
+$types = "";
+
+if ($end_date) {
+    $query .= " AND DATE(s.end_time) = ?";  // Changed to exact date match using =
+    $params[] = $end_date;
+    $types .= "s";
+}
+if ($purpose_filter) {
+    $query .= " AND s.purpose = ?";
+    $params[] = $purpose_filter;
+    $types .= "s";
+}
+if ($lab_filter) {
+    $query .= " AND s.lab_room = ?";
+    $params[] = $lab_filter;
+    $types .= "s";
+}
+
+$query .= " ORDER BY DATE(s.end_time) ASC";
+$stmt = $conn->prepare($query);
+
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
 }
 
 $stmt->execute();
@@ -69,30 +82,47 @@ if (empty($lab_counts)) {
     <div class="max-w-7xl mx-auto p-6">
         <h2 class="text-2xl font-bold text-center mb-6">Sit-in Records</h2>
 
-        <!-- Chart Section -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div class="flex justify-center items-center">
-                <div style="width: 400px; height: 400px;">
-                    <canvas id="purposeChart"></canvas>
-                </div>
+        <!-- Updated Filters -->
+        <form method="POST" class="flex gap-4 mb-6 flex-wrap items-center bg-white p-4 rounded-lg shadow">
+            <div class="flex items-center gap-2">
+                <label class="font-medium">Select Date:</label>
+                <input type="date" name="end_date" class="border rounded px-3 py-2" 
+                       value="<?php echo isset($_POST['end_date']) ? $_POST['end_date'] : ''; ?>"
+                       required>
             </div>
-            <div class="flex justify-center items-center">
-                <div style="width: 400px; height: 400px;">
-                    <canvas id="labChart"></canvas>
-                </div>
+            
+            <div class="flex items-center gap-2">
+                <label class="font-medium">Purpose:</label>
+                <select name="purpose" class="border rounded px-3 py-2">
+                    <option value="">All Purposes</option>
+                    <?php foreach ($purposes as $p): ?>
+                        <option value="<?php echo htmlspecialchars($p['purpose']); ?>"
+                                <?php echo ($purpose_filter === $p['purpose']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($p['purpose']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
             </div>
-        </div>
 
-        <!-- Filters -->
-        <form method="POST" class="flex gap-4">
-            <input type="date" name="start_date" class="border rounded px-3 py-2" value="<?php echo isset($_POST['start_date']) ? $_POST['start_date'] : ''; ?>">
-            <input type="date" name="end_date" class="border rounded px-3 py-2" value="<?php echo isset($_POST['end_date']) ? $_POST['end_date'] : ''; ?>">
+            <div class="flex items-center gap-2">
+                <label class="font-medium">Lab:</label>
+                <select name="lab" class="border rounded px-3 py-2">
+                    <option value="">All Labs</option>
+                    <?php foreach ($labs as $l): ?>
+                        <option value="<?php echo htmlspecialchars($l['lab_room']); ?>"
+                                <?php echo ($lab_filter === $l['lab_room']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($l['lab_room']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
             <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Search</button>
             <a href="view-sit-in.php" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Reset</a>
         </form>
 
-        <!-- Table -->
-        <div class="overflow-x-auto">
+        <!-- Table Section -->
+        <div class="overflow-x-auto mb-6">
             <div class="max-h-[600px] overflow-y-auto"> 
                 <table class="min-w-full table-auto border-collapse border border-gray-300">
                     <thead class="bg-gray-200 sticky top-0"> 
@@ -108,21 +138,41 @@ if (empty($lab_counts)) {
                     </thead>
                     <tbody>
                         <?php 
-                        $sessions->data_seek(0); // Reset pointer
-                        while ($session = $sessions->fetch_assoc()): ?>
-                            <tr class="bg-white">
-                                <td class="border px-4 py-2"><?php echo $session['student_id']; ?></td>
-                                <td class="border px-4 py-2"><?php echo $session['FIRSTNAME'] . ' ' . $session['LASTNAME']; ?></td>
-                                <td class="border px-4 py-2"><?php echo $session['purpose']; ?></td>
-                                <td class="border px-4 py-2"><?php echo $session['lab_room']; ?></td>
-                                <td class="border px-4 py-2"><?php echo date('h:i:s A', strtotime($session['start_time'])); ?></td>
-                                <td class="border px-4 py-2"><?php echo $session['end_time'] ? date('h:i:s A', strtotime($session['end_time'])) : '-'; ?></td>
-                                <td class="border px-4 py-2"><?php echo date('Y-m-d', strtotime($session['start_time'])); ?></td>
+                        $sessions->data_seek(0);
+                        if ($sessions->num_rows > 0):
+                            while ($session = $sessions->fetch_assoc()): ?>
+                                <tr class="bg-white hover:bg-gray-50">
+                                    <td class="border px-4 py-2"><?php echo $session['student_id']; ?></td>
+                                    <td class="border px-4 py-2"><?php echo $session['FIRSTNAME'] . ' ' . $session['LASTNAME']; ?></td>
+                                    <td class="border px-4 py-2"><?php echo $session['purpose']; ?></td>
+                                    <td class="border px-4 py-2"><?php echo $session['lab_room']; ?></td>
+                                    <td class="border px-4 py-2"><?php echo date('h:i:s A', strtotime($session['start_time'])); ?></td>
+                                    <td class="border px-4 py-2"><?php echo $session['end_time'] ? date('h:i:s A', strtotime($session['end_time'])) : '-'; ?></td>
+                                    <td class="border px-4 py-2"><?php echo $session['end_time'] ? date('Y-m-d', strtotime($session['end_time'])) : '-'; ?></td>
+                                </tr>
+                            <?php endwhile;
+                        else: ?>
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-gray-500">No records found for the selected filters.</td>
                             </tr>
-                        <?php endwhile; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div> 
+        </div>
+
+        <!-- Chart Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div style="width: 100%; height: 400px;">
+                    <canvas id="purposeChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div style="width: 100%; height: 400px;">
+                    <canvas id="labChart"></canvas>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -178,6 +228,10 @@ if (empty($lab_counts)) {
                 ...chartOptions,
                 plugins: {
                     ...chartOptions.plugins,
+                    title: {
+                        ...chartOptions.plugins.title,
+                        text: 'Purpose Distribution'
+                    }
                 }
             }
         });
@@ -189,10 +243,13 @@ if (empty($lab_counts)) {
                 ...chartOptions,
                 plugins: {
                     ...chartOptions.plugins,
+                    title: {
+                        ...chartOptions.plugins.title,
+                        text: 'Laboratory Usage'
+                    }
                 }
             }
         });
-        
     </script>
 </body>
 </html>

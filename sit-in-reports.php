@@ -12,54 +12,80 @@ $entries_per_page = isset($_GET['entries']) ? (int)$_GET['entries'] : 10; // Def
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1; // Default to page 1
 $offset = ($page - 1) * $entries_per_page;
 
-// Handle search dates
-$start_date = !empty($_POST['start_date']) ? $_POST['start_date'] : null;
+// Handle filters
 $end_date = !empty($_POST['end_date']) ? $_POST['end_date'] : null;
+$purpose_filter = !empty($_POST['purpose']) ? $_POST['purpose'] : null;
+$lab_filter = !empty($_POST['lab']) ? $_POST['lab'] : null;
 
-// Build the query based on available dates
-if ($end_date && !$start_date) {
-    $query = "
-        SELECT s.*, u.FIRSTNAME, u.LASTNAME 
-        FROM sit_in_sessions s
-        JOIN users u ON s.student_id = u.ID_NUMBER
-        WHERE s.status = 'completed' AND DATE(s.start_time) <= ?
-        ORDER BY s.end_time ASC
-        LIMIT ? OFFSET ?";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param('sii', $end_date, $entries_per_page, $offset);
-} elseif ($start_date && $end_date) {
-    $query = "
-        SELECT s.*, u.FIRSTNAME, u.LASTNAME 
-        FROM sit_in_sessions s
-        JOIN users u ON s.student_id = u.ID_NUMBER
-        WHERE s.status = 'completed' AND DATE(s.start_time) BETWEEN ? AND ?
-        ORDER BY s.end_time ASC
-        LIMIT ? OFFSET ?";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param('ssii', $start_date, $end_date, $entries_per_page, $offset);
-} else {
-    $query = "
-        SELECT s.*, u.FIRSTNAME, u.LASTNAME 
-        FROM sit_in_sessions s
-        JOIN users u ON s.student_id = u.ID_NUMBER
-        WHERE s.status = 'completed'
-        ORDER BY s.end_time ASC
-        LIMIT ? OFFSET ?";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param('ii', $entries_per_page, $offset);
+// Get unique purposes and labs for filter dropdowns
+$purposeQuery = "SELECT DISTINCT purpose FROM sit_in_sessions";
+$labQuery = "SELECT DISTINCT lab_room FROM sit_in_sessions";
+$purposes = $conn->query($purposeQuery)->fetch_all(MYSQLI_ASSOC);
+$labs = $conn->query($labQuery)->fetch_all(MYSQLI_ASSOC);
+
+// Build the query based on filters
+$query = "SELECT s.*, u.FIRSTNAME, u.LASTNAME 
+          FROM sit_in_sessions s
+          JOIN users u ON s.student_id = u.ID_NUMBER
+          WHERE s.status = 'completed'";
+$params = [];
+$types = "";
+
+if ($end_date) {
+    $query .= " AND DATE(s.end_time) = ?";
+    $params[] = $end_date;
+    $types .= "s";
+}
+if ($purpose_filter) {
+    $query .= " AND s.purpose = ?";
+    $params[] = $purpose_filter;
+    $types .= "s";
+}
+if ($lab_filter) {
+    $query .= " AND s.lab_room = ?";
+    $params[] = $lab_filter;
+    $types .= "s";
+}
+
+$query .= " ORDER BY DATE(s.end_time) ASC LIMIT ? OFFSET ?";
+$params[] = $entries_per_page;
+$params[] = $offset;
+$types .= "ii";
+
+$stmt = $conn->prepare($query);
+
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
 }
 
 $stmt->execute();
 $records = $stmt->get_result();
 
-// Get the total number of records for pagination
-$total_query = "
-    SELECT COUNT(*) AS total
-    FROM sit_in_sessions s
-    JOIN users u ON s.student_id = u.ID_NUMBER
-    WHERE s.status = 'completed'";
-$total_result = $conn->query($total_query);
-$total_records = $total_result->fetch_assoc()['total'];
+// Update the count query to match the filters
+$count_query = "SELECT COUNT(*) as total 
+                FROM sit_in_sessions s
+                JOIN users u ON s.student_id = u.ID_NUMBER
+                WHERE s.status = 'completed'";
+$count_params = [];
+$count_types = "";
+
+if ($end_date) {
+    $count_query .= " AND DATE(s.end_time) = ?";
+    $count_params[] = $end_date;
+    $count_types .= "s";
+}
+if ($purpose_filter) {
+    $count_query .= " AND s.purpose = ?";
+    $count_params[] = $purpose_filter;
+    $count_types .= "s";
+}
+
+$count_stmt = $conn->prepare($count_query);
+if (!empty($count_params)) {
+    $count_stmt->bind_param($count_types, ...$count_params);
+}
+$count_stmt->execute();
+$total_records = $count_stmt->get_result()->fetch_assoc()['total'];
 $total_pages = ceil($total_records / $entries_per_page);
 
 if (isset($_GET['export'])) {
@@ -172,22 +198,23 @@ if (isset($_GET['export'])) {
 
         // Define the HTML content
         $html = '
-        <div style="text-align: center; font-family: Arial, sans-serif; font-size: 14px;">
-            ' . ($imagePath ? '<img src="' . $imagePath . '" height="70" style="margin-bottom: 10px;">' : '') . '
-            <h1 style="margin: 0;">UNIVERSITY OF CEBU</h1>
-            <h2 style="margin: 0;">College of Computer Studies</h2>
-            <p style="margin: 0;">Generated on: ' . $generatedDate . '</p>
+        <div style="text-align: center; margin-bottom: 20px;">
+            ' . ($imagePath ? '<img src="' . $imagePath . '" height="80" style="margin-bottom: 10px;">' : '') . '
+            <h1 style="font-size: 16pt; font-weight: bold; margin: 5px 0;">UNIVERSITY OF CEBU</h1>
+            <h2 style="font-size: 14pt; margin: 5px 0;">College of Computer Studies</h2>
+            <h3 style="font-size: 13pt; margin: 5px 0;">Laboratory Sit-in Session Report</h3>
+            <p style="font-size: 10pt; margin: 15px 0;">Generated on: ' . $generatedDate . '</p>
         </div>
-        <table style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; font-size: 12px; margin-top: 20px;">
-            <thead style="background-color: #f4f4f4;">
-                <tr>
-                    <th style="border: 1px solid #ddd; padding: 8px;">ID Number</th>
-                    <th style="border: 1px solid #ddd; padding: 8px;">Name</th>
-                    <th style="border: 1px solid #ddd; padding: 8px;">Purpose</th>
-                    <th style="border: 1px solid #ddd; padding: 8px;">Laboratory</th>
-                    <th style="border: 1px solid #ddd; padding: 8px;">Login</th>
-                    <th style="border: 1px solid #ddd; padding: 8px;">Logout</th>
-                    <th style="border: 1px solid #ddd; padding: 8px;">Date</th>
+        <table cellpadding="6" style="border-collapse: collapse; width: 100%; margin-top: 10px; font-family: Arial, sans-serif; font-size: 10pt;">
+            <thead>
+                <tr style="background-color: #f0f0f0;">
+                    <th style="border: 1px solid #000; font-weight: bold; text-align: center;">ID Number</th>
+                    <th style="border: 1px solid #000; font-weight: bold; text-align: center;">Name</th>
+                    <th style="border: 1px solid #000; font-weight: bold; text-align: center;">Purpose</th>
+                    <th style="border: 1px solid #000; font-weight: bold; text-align: center;">Laboratory</th>
+                    <th style="border: 1px solid #000; font-weight: bold; text-align: center;">Login</th>
+                    <th style="border: 1px solid #000; font-weight: bold; text-align: center;">Logout</th>
+                    <th style="border: 1px solid #000; font-weight: bold; text-align: center;">Date</th>
                 </tr>
             </thead>
             <tbody>';
@@ -195,43 +222,64 @@ if (isset($_GET['export'])) {
         while ($row = $pdf_records->fetch_assoc()) {
             $html .= '
                 <tr>
-                    <td style="border: 1px solid #ddd; padding: 8px;">' . htmlspecialchars($row['student_id']) . '</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">' . htmlspecialchars($row['FIRSTNAME'] . ' ' . $row['LASTNAME']) . '</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">' . htmlspecialchars($row['purpose']) . '</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">' . htmlspecialchars($row['lab_room']) . '</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">' . date("h:i:sa", strtotime($row['start_time'])) . '</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">' . date("h:i:sa", strtotime($row['end_time'])) . '</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">' . date("Y-m-d", strtotime($row['start_time'])) . '</td>
+                    <td style="border: 1px solid #000; text-align: center;">' . htmlspecialchars($row['student_id']) . '</td>
+                    <td style="border: 1px solid #000; text-align: center;">' . htmlspecialchars($row['FIRSTNAME'] . ' ' . $row['LASTNAME']) . '</td>
+                    <td style="border: 1px solid #000; text-align: center;">' . htmlspecialchars($row['purpose']) . '</td>
+                    <td style="border: 1px solid #000; text-align: center;">' . htmlspecialchars($row['lab_room']) . '</td>
+                    <td style="border: 1px solid #000; text-align: center;">' . date("h:i:sa", strtotime($row['start_time'])) . '</td>
+                    <td style="border: 1px solid #000; text-align: center;">' . date("h:i:sa", strtotime($row['end_time'])) . '</td>
+                    <td style="border: 1px solid #000; text-align: center;">' . date("Y-m-d", strtotime($row['start_time'])) . '</td>
                 </tr>';
         }
 
         $html .= '
             </tbody>
-        </table>';
+        </table>
+        <div style="margin-top: 30px; font-size: 10pt;">
+            <p style="margin-bottom: 5px;"><strong>Total Records:</strong> ' . $total_records . '</p>
+        </div>';
 
         $pdf->writeHTML($html, true, false, true, false, '');
         $pdf->Output('sit_in_reports.pdf', 'D');
         exit();
     } elseif ($exportType === 'print') {
-        $generatedDate = date("Y-m-d h:i:sa");
-        
-        // Define the absolute path to the image
+        $generatedDate = date("F d, Y h:i A");
         $imagePath = __DIR__ . '/images/uc.png';
 
-        // Check if the image exists
-        if (!file_exists($imagePath)) {
-            $imagePath = '';
-        }
-
         echo "
-        <div style='text-align: center; font-family: Arial, sans-serif; font-size: 14px;'>
-            " . ($imagePath ? "<img src='" . $imagePath . "' height='70' style='margin-bottom: 10px;'>" : "") . "
-            <h1 style='margin: 0;'>UNIVERSITY OF CEBU</h1>
-            <h2 style='margin: 0;'>College of Computer Studies</h2>
-            <p style='margin: 0;'>Generated on: $generatedDate</p>
-        </div>
-        <table border='1' style='border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; font-size: 12px; margin-top: 20px;'>
-            <thead style='background-color: #f4f4f4;'>
+        <style>
+    @media print {
+        .logo-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .logo-left {
+            width: 80px;
+            height: auto;
+        }
+        .logo-right {
+            width: 80px;
+            height: auto;
+        }
+    }
+</style>
+<div class='letterhead'>
+    <div class='logo-container'>
+        <img src='images/uc.png' class='logo-left' alt='UC Logo'>
+        <img src='images/css-new.png' class='logo-right' alt='CSS Logo'>
+    </div>
+    <div class='institution'>University of Cebu</div>
+    <div class='department'>College of Computer Studies</div>
+    <div class='address'>Sanciangko Street, Cebu City</div>
+</div>
+
+        <div class='document-title'>LABORATORY SIT-IN SESSION REPORT</div>
+        <div class='date-generated'>Generated on: $generatedDate</div>
+
+        <table>
+            <thead>
                 <tr>
                     <th>ID Number</th>
                     <th>Name</th>
@@ -245,21 +293,50 @@ if (isset($_GET['export'])) {
             <tbody>";
 
         while ($row = $records->fetch_assoc()) {
-            echo "
-                <tr>
-                    <td>{$row['student_id']}</td>
-                    <td>{$row['FIRSTNAME']} {$row['LASTNAME']}</td>
-                    <td>{$row['purpose']}</td>
-                    <td>{$row['lab_room']}</td>
-                    <td>" . date("h:i:sa", strtotime($row['start_time'])) . "</td>
-                    <td>" . date("h:i:sa", strtotime($row['end_time'])) . "</td>
-                    <td>" . date("Y-m-d", strtotime($row['start_time'])) . "</td>
-                </tr>";
+            echo "<tr>
+                <td>{$row['student_id']}</td>
+                <td>{$row['FIRSTNAME']} {$row['LASTNAME']}</td>
+                <td>{$row['purpose']}</td>
+                <td>{$row['lab_room']}</td>
+                <td>" . date("h:i A", strtotime($row['start_time'])) . "</td>
+                <td>" . date("h:i A", strtotime($row['end_time'])) . "</td>
+                <td>" . date("M d, Y", strtotime($row['start_time'])) . "</td>
+            </tr>";
         }
 
-        echo "
-            </tbody>
+        echo "</tbody>
         </table>
+
+        <div class='report-summary'>
+            <strong>Total Records:</strong> $total_records
+        </div>
+
+        <div class='footer'>
+            <div class='signature-grid'>
+                <div class='signature-block'>
+                    <div class='signature-line'></div>
+                    <div class='signatory-name'>Ms. Jane Doe</div>
+                    <div class='signatory-title'>Laboratory Staff</div>
+                    <div class='signatory-title'>Prepared by</div>
+                </div>
+                <div class='signature-block'>
+                    <div class='signature-line'></div>
+                    <div class='signatory-name'>Mr. John Smith</div>
+                    <div class='signatory-title'>Laboratory Head</div>
+                    <div class='signatory-title'>Verified by</div>
+                </div>
+                <div class='signature-block'>
+                    <div class='signature-line'></div>
+                    <div class='signatory-name'>Dr. Maria Garcia</div>
+                    <div class='signatory-title'>Department Head</div>
+                    <div class='signatory-title'>Noted by</div>
+                </div>
+            </div>
+            <div class='report-meta'>
+                Document No: CCS-" . date('Ymd-His') . "<br>
+                Page 1 of 1
+            </div>
+        </div>
         <script>window.print();</script>";
         exit();
     }
@@ -276,21 +353,45 @@ if (isset($_GET['export'])) {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script> 
     <script>
         function printReport() {
-            const originalContent = document.body.innerHTML; 
-            const printContent = document.getElementById('reportTable').outerHTML;
+            // Store the current page content
+            const originalContent = document.body.innerHTML;
+            
+            // Get the base URL of your site
+            const baseUrl = window.location.origin + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
 
-                document.body.innerHTML = `
-            <div style="text-align: center; font-family: Arial, sans-serif; font-size: 14px;">
-                <img src="css-sit-in/images/uc.png" style="margin-bottom: 10px; width: 150px; height: auto;" onerror="this.onerror=null; this.src='images/uc.png';">
-                <h1 style="margin: 0;">UNIVERSITY OF CEBU</h1>
-                <h2 style="margin: 0;">College of Computer Studies</h2>
-                <p style="margin: 0;">Generated on: ${new Date().toLocaleString()}</p>
-            </div>
-            ${printContent}
+            // Create the print content
+            const printContent = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <img src="${baseUrl}images/uc.png" style="height: 60px; margin: 10px; float: left;">
+                    <img src="${baseUrl}images/css-new.png" style="height: 60px; margin: 10px; float: right;">
+                    <div style="font-size: 24px; font-weight: bold; margin: 10px 0;">UNIVERSITY OF CEBU</div>
+                    <div style="font-size: 16px; color: #666;">College of Computer Studies</div>
+                    <div style="font-size: 16px; color: #666;">Laboratory Sit-in Session Report</div>
+                    <div style="font-size: 16px; color: #666;">Generated on: ${new Date().toLocaleString()}</div>
+                </div>
+                ${document.getElementById('reportTable').outerHTML}
             `;
 
-            window.print(); 
-            document.body.innerHTML = originalContent; 
+            // Apply print styles
+            const style = document.createElement('style');
+            style.textContent = `
+                @media print {
+                    body { font-family: Arial, sans-serif; }
+                    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #f4f4f4; }
+                    nav, form, .pagination { display: none; }
+                }
+            `;
+            document.head.appendChild(style);
+
+            // Replace content and print
+            document.body.innerHTML = printContent;
+            window.print();
+
+            // Restore original content
+            document.body.innerHTML = originalContent;
+            document.head.removeChild(style);
         }
 
         function exportToExcel() {
@@ -369,35 +470,68 @@ if (isset($_GET['export'])) {
     <div class="max-w-7xl mx-auto p-6">
         <h2 class="text-2xl font-bold text-center mb-6">Sit-in Reports</h2>
 
-        <div class="flex justify-between items-center mb-4">
-            <!-- Search & Filter Section -->
-            <form method="POST" class="flex gap-4">
-                <input type="date" name="start_date" class="border rounded px-3 py-2" value="<?php echo isset($_POST['start_date']) ? $_POST['start_date'] : ''; ?>">
-                <input type="date" name="end_date" class="border rounded px-3 py-2" value="<?php echo isset($_POST['end_date']) ? $_POST['end_date'] : ''; ?>">
-                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Search</button>
-                <a href="sit-in-reports.php" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Reset</a>
-            </form>
-
-            <!-- Entries Dropdown -->
+        <!-- Entries Dropdown -->
+        <div class="flex justify-end mb-4">
             <form method="GET" class="flex items-center gap-2">
-                <label for="entries" class="text-sm font-medium">Show</label>
-                <select name="entries" id="entries" class="border rounded px-3 py-2" onchange="this.form.submit()">
-                    <option value="10" <?= $entries_per_page == 10 ? 'selected' : '' ?>>10</option>
-                    <option value="25" <?= $entries_per_page == 25 ? 'selected' : '' ?>>25</option>
-                    <option value="50" <?= $entries_per_page == 50 ? 'selected' : '' ?>>50</option>
-                    <option value="100" <?= $entries_per_page == 100 ? 'selected' : '' ?>>100</option>
-                </select>
-                <span class="text-sm font-medium">entries</span>
+            <label for="entries" class="text-sm font-medium">Show</label>
+            <select name="entries" id="entries" class="border rounded px-3 py-2" onchange="this.form.submit()">
+                <option value="10" <?= $entries_per_page == 10 ? 'selected' : '' ?>>10</option>
+                <option value="25" <?= $entries_per_page == 25 ? 'selected' : '' ?>>25</option>
+                <option value="50" <?= $entries_per_page == 50 ? 'selected' : '' ?>>50</option>
+                <option value="100" <?= $entries_per_page == 100 ? 'selected' : '' ?>>100</option>
+            </select>
+            <span class="text-sm font-medium">entries</span>
             </form>
+        </div>
+
+        <!-- Updated Filter Form -->
+        <form method="POST" class="flex gap-4 mb-6 flex-wrap items-center bg-white p-4 rounded-lg shadow">
+            <div class="flex items-center gap-2">
+                <label class="font-medium">Select Date:</label>
+                <input type="date" name="end_date" class="border rounded px-3 py-2" 
+                       value="<?php echo isset($_POST['end_date']) ? $_POST['end_date'] : ''; ?>"
+                       required>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <label class="font-medium">Purpose:</label>
+                <select name="purpose" class="border rounded px-3 py-2">
+                    <option value="">All Purposes</option>
+                    <?php foreach ($purposes as $p): ?>
+                        <option value="<?php echo htmlspecialchars($p['purpose']); ?>"
+                                <?php echo ($purpose_filter === $p['purpose']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($p['purpose']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <label class="font-medium">Lab:</label>
+                <select name="lab" class="border rounded px-3 py-2">
+                    <option value="">All Labs</option>
+                    <?php foreach ($labs as $l): ?>
+                        <option value="<?php echo htmlspecialchars($l['lab_room']); ?>"
+                                <?php echo ($lab_filter === $l['lab_room']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($l['lab_room']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Search</button>
+            <a href="sit-in-reports.php" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Reset</a>
 
             <!-- Export Buttons -->
-            <div class="flex gap-2">
+            <div class="flex flex-1 justify-end gap-2">
                 <a href="#" onclick="exportToExcel()" class="bg-green-600 text-white px-3 py-2 rounded">Excel</a>
                 <a href="?export=csv" class="bg-purple-600 text-white px-3 py-2 rounded">CSV</a>
                 <a href="?export=pdf" class="bg-red-700 text-white px-3 py-2 rounded">PDF</a>
                 <a href="#" onclick="printReport()" class="bg-black text-white px-3 py-2 rounded">Print</a>
             </div>
-        </div>
+        </form>
+
+
 
         <!-- Table -->
         <div class="bg-white shadow-md rounded-lg p-4">

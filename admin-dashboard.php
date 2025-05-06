@@ -211,85 +211,155 @@ $conn->close();
     </nav>
 
     <!-- Dashboard Content -->
-    <div class="max-w-7xl mx-auto p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-        <!-- Statistics Section -->
-        <div class="bg-white shadow-md rounded-lg p-4">
-            <h2 class="text-lg font-semibold text-blue-900">📊 Statistics</h2>
-            <p>Students Registered: <strong><?php echo $statistics['total_students']; ?></strong></p>
-            <p>Currently Sit-in: <strong><?php echo $statistics['current_sitin']; ?></strong></p>
-            <p>Total Sit-in: <strong><?php echo $statistics['total_sitin']; ?></strong></p>
-
-            <!-- Pie Chart Canvas -->
-            <canvas id="pieChart"></canvas>
+    <div class="max-w-7xl mx-auto p-8">
+        <!-- Welcome Banner -->
+        <div class="bg-gradient-to-r from-blue-900 to-blue-700 rounded-xl p-6 mb-8 text-white shadow-lg">
+            <h1 class="text-3xl font-bold">Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></h1>
+            <p class="mt-2 opacity-90">College of Computer Studies Admin Dashboard</p>
         </div>
 
-        <!-- Student Year Level Bar Chart -->
-        <div class="bg-white shadow-md rounded-lg p-4">
-            <h2 class="text-lg font-semibold text-blue-900">📈 Students Year Level</h2>
-            <canvas id="barChart"></canvas>
-        </div>
-
-        <!-- Announcements Section -->
-        <div class="bg-white shadow-md rounded-lg p-4">
-            <h2 class="text-lg font-semibold text-blue-900">📢 Announcements</h2>
-            <form method="POST" class="mb-4">
-            <textarea name="announcement" class="w-full p-2 border rounded-lg" placeholder="New Announcement"></textarea>
-            <div class="flex justify-center">
-                <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded-md mt-2">Submit</button>
+        <!-- Dashboard Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Students Registered Card -->
+            <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-800">Students Registered</h2>
+                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">Live Data</span>
             </div>
-            </form>
-            
-            <h3 class="text-md font-semibold">Posted Announcements</h3>
-            <div class="border-t mt-2 pt-2 max-h-[300px] overflow-y-auto">
-            <?php if ($announcements && $announcements->num_rows > 0): ?>
-                <?php while($row = $announcements->fetch_assoc()): ?>
-                <div class="mb-4 pb-2 border-b last:border-0">
-                    <div class="flex justify-between items-start">
-                        <p class="text-sm text-gray-600">
-                            <strong><?php echo htmlspecialchars($row['admin_username']); ?> | 
-                            <?php echo date('F d, Y h:i A', strtotime($row['date_posted'])); ?></strong>
-                        </p>
-                        <?php if ($row['admin_username'] === $_SESSION['username']): ?>
-                            <div class="flex space-x-2">
-                                <button onclick="editAnnouncement(<?php echo $row['id']; ?>, '<?php echo addslashes($row['content']); ?>')"
-                                        class="text-blue-600 hover:text-blue-800">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                                    </svg>
-                                </button>
-                                <button onclick="deleteAnnouncement(<?php echo $row['id']; ?>)"
-                                        class="text-red-600 hover:text-red-800">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                    <p class="mt-1"><?php echo nl2br(htmlspecialchars($row['content'])); ?></p>
+            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                <span class="text-gray-600">Total Students</span>
+                <span class="text-3xl font-bold text-blue-600"><?php echo $statistics['total_students']; ?></span>
+            </div>
+            </div>
+
+            <!-- Current Sit-ins Card -->
+            <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-800">Current Sit-ins</h2>
+                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Active</span>
+            </div>
+            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                <span class="text-gray-600">Active Sessions</span>
+                <span class="text-3xl font-bold text-green-600"><?php echo $statistics['current_sitin']; ?></span>
+            </div>
+            </div>
+
+            <!-- Total Sit-ins Card -->
+            <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-800">Total Sit-ins</h2>
+                <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">All Time</span>
+            </div>
+            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                <span class="text-gray-600">Total Sessions</span>
+                <span class="text-3xl font-bold text-purple-600"><?php echo $statistics['total_sitin']; ?></span>
+            </div>
+            </div>
+
+            <!-- Analytics Card -->
+            <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-800">Purpose Analytics</h2>
+                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">Chart</span>
+            </div>
+            <canvas id="pieChart" class="w-full"></canvas>
+            </div>
+
+            <!-- Year Level Analytics Card -->
+            <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-800">Year Level Distribution</h2>
+                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Analytics</span>
+            </div>
+            <canvas id="barChart" class="w-full"></canvas>
+            </div>
+
+            <!-- Announcements Card -->
+            <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-6 border border-gray-100">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-800">Announcements</h2>
+                    <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm">Updates</span>
                 </div>
-                <?php endwhile; ?>
-            <?php else: ?>
-                <p class="text-gray-500">No announcements yet.</p>
-            <?php endif; ?>
+                <form method="POST" class="mb-6">
+                    <textarea name="announcement" 
+                            class="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                            placeholder="Write your announcement here..."
+                            rows="4"></textarea>
+                    <button type="submit" 
+                            class="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path>
+                        </svg>
+                        Post Announcement
+                    </button>
+                </form>
+
+                <div class="space-y-4 max-h-[400px] overflow-y-auto px-2">
+                    <?php if ($announcements && $announcements->num_rows > 0): ?>
+                        <?php while($row = $announcements->fetch_assoc()): ?>
+                        <div class="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors duration-200">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                                        <?php echo strtoupper(substr($row['admin_username'], 0, 1)); ?>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold text-gray-800"><?php echo htmlspecialchars($row['admin_username']); ?></p>
+                                        <p class="text-sm text-gray-500"><?php echo date('F d, Y h:i A', strtotime($row['date_posted'])); ?></p>
+                                    </div>
+                                </div>
+                                <?php if ($row['admin_username'] === $_SESSION['username']): ?>
+                                <div class="flex space-x-2">
+                                    <button onclick="editAnnouncement(<?php echo $row['id']; ?>, '<?php echo addslashes($row['content']); ?>')"
+                                            class="text-blue-600 hover:text-blue-800 p-1 rounded-full hover:bg-blue-100 transition-colors duration-200">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                        </svg>
+                                    </button>
+                                    <button onclick="deleteAnnouncement(<?php echo $row['id']; ?>)"
+                                            class="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100 transition-colors duration-200">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                            <p class="text-gray-700 whitespace-pre-line"><?php echo nl2br(htmlspecialchars($row['content'])); ?></p>
+                        </div>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <div class="text-center py-8 text-gray-500">
+                            <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
+                            </svg>
+                            <p>No announcements yet</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
-
     </div>
 
-    <!-- Add this modal for editing -->
-    <div id="editModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <!-- Edit Modal with improved styling -->
+    <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-8 border w-[32rem] shadow-xl rounded-xl bg-white">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Edit Announcement</h3>
             <form method="POST" id="editForm">
                 <input type="hidden" name="announcement_id" id="edit_announcement_id">
                 <input type="hidden" name="edit_announcement" value="1">
-                <textarea name="edited_content" id="edit_content" class="w-full p-2 border rounded-lg" rows="4"></textarea>
-                <div class="mt-4 flex justify-end space-x-3">
+                <textarea name="edited_content" id="edit_content" 
+                        class="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                        rows="6"></textarea>
+                <div class="mt-6 flex justify-end space-x-4">
                     <button type="button" onclick="closeEditModal()" 
-                            class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">Cancel</button>
+                            class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition duration-300">
+                        Cancel
+                    </button>
                     <button type="submit" 
-                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Update</button>
+                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-300">
+                        Update
+                    </button>
                 </div>
             </form>
         </div>
