@@ -25,7 +25,7 @@ $direct_sessions = $conn->query("
 $current_date = date('Y-m-d');
 $current_time = date('H:i:s');
 
-// Fetch active reservations for current time
+// Update the reservation query to only show approved reservations without timeout
 $reservation_sessions = $conn->query("
     SELECT 
         r.id,
@@ -43,7 +43,8 @@ $reservation_sessions = $conn->query("
         u.SESSION
     FROM reservations r
     JOIN users u ON r.student_id = u.ID_NUMBER
-    WHERE r.status = 'approved'
+    WHERE r.status = 'approved' 
+    AND (r.timeout_at IS NULL)  -- Only show reservations that haven't been timed out
     ORDER BY r.time_in ASC
 ");
 
@@ -81,15 +82,51 @@ if (isset($_POST['end_session'])) {
 // Handle reservation timeout with end time tracking
 if (isset($_POST['end_reservation'])) {
     $reservation_id = $_POST['reservation_id'];
-    $timeout_at = date('Y-m-d H:i:s');
+    $student_id = $_POST['student_id'];
+    $now = date('Y-m-d H:i:s');
     
-    $stmt = $conn->prepare("UPDATE reservations SET status = 'completed', timeout_at = ? WHERE id = ?");
-    $stmt->bind_param("si", $timeout_at, $reservation_id);
+    // Start transaction
+    $conn->begin_transaction();
     
-    if ($stmt->execute()) {
-        $_SESSION['success'] = "Reservation has been completed successfully.";
-    } else {
-        $_SESSION['error'] = "Failed to complete the reservation.";
+    try {
+        // First get current session count
+        $session_query = $conn->prepare("SELECT SESSION FROM users WHERE ID_NUMBER = ?");
+        $session_query->bind_param("s", $student_id);
+        $session_query->execute();
+        $current_session = $session_query->get_result()->fetch_assoc()['SESSION'];
+        
+        // Get reservation details to update computer status
+        $get_reservation = $conn->prepare("SELECT lab_room, pc_number FROM reservations WHERE id = ?");
+        $get_reservation->bind_param("i", $reservation_id);
+        $get_reservation->execute();
+        $reservation = $get_reservation->get_result()->fetch_assoc();
+        
+        // Record timeout
+        $stmt = $conn->prepare("UPDATE reservations SET timeout_at = ? WHERE id = ? AND status = 'approved'");
+        $stmt->bind_param("si", $now, $reservation_id);
+        
+        // Update computer status to available
+        $update_computer = $conn->prepare("
+            UPDATE computers 
+            SET status = 'available' 
+            WHERE lab_room_id = ? AND pc_number = ?
+        ");
+        $update_computer->bind_param("ss", $reservation['lab_room'], $reservation['pc_number']);
+        
+        // Decrease session count
+        $new_session = $current_session - 1;
+        $update_session = $conn->prepare("UPDATE users SET SESSION = ? WHERE ID_NUMBER = ?");
+        $update_session->bind_param("is", $new_session, $student_id);
+        
+        if ($stmt->execute() && $update_computer->execute() && $update_session->execute()) {
+            $conn->commit();
+            $_SESSION['success'] = "Timeout recorded successfully. Student has {$new_session} sessions remaining.";
+        } else {
+            throw new Exception("Failed to record timeout");
+        }
+    } catch (Exception $e) {
+        $conn->rollback();
+        $_SESSION['error'] = "Error: " . $e->getMessage();
     }
     
     header("Location: sit-in.php");
@@ -239,7 +276,7 @@ if (isset($_POST['start_sitin'])) {
                                         <?php echo htmlspecialchars($reservation['FIRSTNAME'] . ' ' . $reservation['LASTNAME']); ?>
                                     </td>
                                     <td class="border px-4 py-2">Room <?php echo htmlspecialchars($reservation['lab_room']); ?></td>
-                                    <td class="border px-4 py-2"><?php echo htmlspecialchars($reservation['pc_number']); ?></td>
+                         <td class="border px-4 py-2"><?php echo htmlspecialchars($reservation['pc_number']); ?></td>
                                     <td class="border px-4 py-2"><?php echo htmlspecialchars($reservation['purpose']); ?></td>
                                     <td class="border px-4 py-2">
                                         <?php 
@@ -249,14 +286,22 @@ if (isset($_POST['start_sitin'])) {
                                     </td>
                                     <td class="border px-4 py-2"><?php echo htmlspecialchars($reservation['SESSION']); ?></td>
                                     <td class="border px-4 py-2">
-                                        <form method="POST" action="end_reservation.php" class="inline text-center">
-                                            <input type="hidden" name="reservation_id" value="<?php echo $reservation['id']; ?>">
-                                            <input type="hidden" name="student_id" value="<?php echo $reservation['ID_NUMBER']; ?>">
-                                            <button type="submit" name="end_reservation" 
-                                                    class="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700">
-                                                Time Out
-                                            </button>
-                                        </form>
+                                        <?php 
+                                        if (empty($reservation['timeout_at'])): 
+                                        ?>
+                                            <form method="POST" class="inline text-center">
+                                                <input type="hidden" name="reservation_id" value="<?php echo $reservation['id']; ?>">
+                                                <input type="hidden" name="student_id" value="<?php echo $reservation['ID_NUMBER']; ?>">
+                                                <button type="submit" name="end_reservation" 
+                                                        class="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700">
+                                                    Record Timeout
+                                                </button>
+                                            </form>
+                                        <?php else: ?>
+                                            <span class="text-gray-500">
+                                                Timed out at <?php echo date('h:i A', strtotime($reservation['timeout_at'])); ?>
+                                            </span>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endwhile; ?>

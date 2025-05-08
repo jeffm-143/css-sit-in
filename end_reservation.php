@@ -11,8 +11,8 @@ if (isset($_POST['end_reservation'])) {
     $conn->begin_transaction();
     
     try {
-        // Update reservation status
-        $stmt = $conn->prepare("UPDATE reservations SET status = 'completed', timeout_at = ? WHERE id = ?");
+        // Only update timeout_at without changing status
+        $stmt = $conn->prepare("UPDATE reservations SET timeout_at = ? WHERE id = ?");
         $stmt->bind_param("si", $end_time, $reservation_id);
         
         if ($stmt->execute()) {
@@ -28,9 +28,9 @@ if (isset($_POST['end_reservation'])) {
             $update_session->execute();
             
             $conn->commit();
-            $_SESSION['success'] = "Reservation completed. Student has " . $new_session . " sessions remaining.";
+            $_SESSION['success'] = "Reservation timeout recorded. Student has " . $new_session . " sessions remaining.";
         } else {
-            throw new Exception("Failed to complete reservation");
+            throw new Exception("Failed to record timeout");
         }
     } catch (Exception $e) {
         $conn->rollback();

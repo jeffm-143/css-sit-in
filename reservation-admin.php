@@ -71,10 +71,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Handle reservation approval/rejection
     if (isset($_POST['approve_reservation'])) {
         $reservation_id = $_POST['reservation_id'];
-        $stmt = $conn->prepare("UPDATE reservations SET status = 'approved' WHERE id = ?");
-        $stmt->bind_param("i", $reservation_id);
-        if ($stmt->execute()) {
-            $_SESSION['alert'] = ['type' => 'success', 'message' => 'Reservation approved successfully!'];
+        
+        // Start transaction
+        $conn->begin_transaction();
+        
+        try {
+            // First, get the reservation details
+            $get_reservation = $conn->prepare("
+                SELECT lab_room, pc_number 
+                FROM reservations 
+                WHERE id = ?
+            ");
+            $get_reservation->bind_param("i", $reservation_id);
+            $get_reservation->execute();
+            $reservation = $get_reservation->get_result()->fetch_assoc();
+
+            if (!$reservation) {
+                throw new Exception("Reservation not found");
+            }
+
+            // Update reservation status to approved
+            $update_reservation = $conn->prepare("
+                UPDATE reservations 
+                SET status = 'approved' 
+                WHERE id = ?
+            ");
+            $update_reservation->bind_param("i", $reservation_id);
+            $update_reservation->execute();
+
+            // Update computer status to in_use
+            $update_computer = $conn->prepare("
+                UPDATE computers 
+                SET status = 'in_use' 
+                WHERE lab_room_id = ? AND pc_number = ?
+            ");
+            $update_computer->bind_param("ss", $reservation['lab_room'], $reservation['pc_number']);
+            $update_computer->execute();
+
+            // Commit transaction
+            $conn->commit();
+            $_SESSION['alert'] = [
+                'type' => 'success', 
+                'message' => 'Reservation approved and computer status updated!'
+            ];
+        } catch (Exception $e) {
+            // Rollback on error
+            $conn->rollback();
+            $_SESSION['alert'] = [
+                'type' => 'error', 
+                'message' => 'Error: ' . $e->getMessage()
+            ];
         }
     } elseif (isset($_POST['reject_reservation'])) {
         $reservation_id = $_POST['reservation_id'];
@@ -99,12 +145,11 @@ $pending_query = "SELECT r.*, u.FIRSTNAME, u.LASTNAME
                  ORDER BY r.reservation_date ASC, r.time_in ASC";
 $pending_reservations = $conn->query($pending_query);
 
-// Fetch reservation activity logs
+// Update the activity logs query to match the database enum values
 $activity_logs_query = "
     SELECT r.*, u.FIRSTNAME, u.LASTNAME 
     FROM reservations r
     JOIN users u ON r.student_id = u.ID_NUMBER
-    WHERE r.status IN ('approved', 'disapproved')
     ORDER BY r.updated_at DESC
 ";
 $activity_logs = $conn->query($activity_logs_query);
@@ -271,7 +316,7 @@ if (isset($_GET['get_computers'])) {
 
         <!-- Computer Control -->
         <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <h2 id="roomHeading" class="text-2xl font-bold mb-6">Computer Status Management - Room 517</h2>
+            <h2 id="roomHeading" class="text-2xl font-bold mb-6">Computer Control</h2>
             <div class="flex gap-4 mb-6">
                 <select id="labRoomSelect" class="border rounded-lg px-4 py-2 hover:border-blue-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
                     <option value="517" selected>Room 517</option>
@@ -348,13 +393,20 @@ if (isset($_GET['get_computers'])) {
                                 <td class="px-6 py-4"><?php echo htmlspecialchars($row['purpose']); ?></td>
                                 <td class="px-6 py-4">
                                     <span class="px-2 py-1 text-xs rounded-full <?php 
-                                        echo match($row['status']) {
-                                            'pending' => 'bg-yellow-100 text-yellow-800',
-                                            'approved' => 'bg-green-100 text-green-800',
-                                            'rejected' => 'bg-red-100 text-red-800',
-                                            'completed' => 'bg-gray-100 text-gray-800',
-                                            default => 'bg-gray-100 text-gray-800'
-                                        };
+                                        switch($row['status']) {
+                                            case 'pending':
+                                                echo 'bg-yellow-100 text-yellow-800';
+                                                break;
+                                            case 'approved':
+                                                echo 'bg-green-100 text-green-800';
+                                                break;
+                                            case 'disapproved':
+                                            case 'rejected':
+                                                echo 'bg-red-100 text-red-800';
+                                                break;
+                                            default:
+                                                echo 'bg-gray-100 text-gray-800';
+                                        }
                                     ?>">
                                         <?php echo ucfirst($row['status']); ?>
                                     </span>
@@ -387,6 +439,7 @@ if (isset($_GET['get_computers'])) {
             <div class="mb-6">
                 <select id="logsStatusFilter" class="border rounded-lg px-4 py-2" onchange="filterLogs(this.value)">
                     <option value="all">All Status</option>
+                    <option value="pending">Pending</option>
                     <option value="approved">Approved</option>
                     <option value="disapproved">Disapproved</option>
                 </select>
@@ -417,9 +470,20 @@ if (isset($_GET['get_computers'])) {
                                     <td class="px-6 py-4"><?php echo htmlspecialchars($row['purpose']); ?></td>
                                     <td class="px-6 py-4">
                                         <span class="status-badge px-2 py-1 text-xs rounded-full <?php 
-                                            echo $row['status'] === 'approved' 
-                                                ? 'bg-green-100 text-green-800' 
-                                                : 'bg-red-100 text-red-800'; 
+                                            switch($row['status']) {
+                                                case 'pending':
+                                                    echo 'bg-yellow-100 text-yellow-800';
+                                                    break;
+                                                case 'approved':
+                                                    echo 'bg-green-100 text-green-800';
+                                                    break;
+                                                case 'disapproved':
+                                                case 'rejected':
+                                                    echo 'bg-red-100 text-red-800';
+                                                    break;
+                                                default:
+                                                    echo 'bg-gray-100 text-gray-800';
+                                            }
                                         ?>">
                                             <?php echo ucfirst($row['status']); ?>
                                         </span>
@@ -444,18 +508,28 @@ if (isset($_GET['get_computers'])) {
                 
                 rows.forEach(row => {
                     const rowStatus = row.dataset.status;
-                    const shouldShow = status === 'all' || 
-                                     (status === 'approved' && rowStatus === 'approved') ||
-                                     (status === 'disapproved' && rowStatus === 'disapproved');
+                    let shouldShow = false;
                     
-                    if (shouldShow) {
-                        row.style.display = '';
-                        visibleCount++;
-                    } else {
-                        row.style.display = 'none';
+                    switch(status) {
+                        case 'all':
+                            shouldShow = true;
+                            break;
+                        case 'pending':
+                            shouldShow = rowStatus === 'pending';
+                            break;
+                        case 'approved':
+                            shouldShow = rowStatus === 'approved';
+                            break;
+                        case 'disapproved':
+                            shouldShow = rowStatus === 'disapproved' || rowStatus === 'rejected';
+                            break;
                     }
+                    
+                    row.style.display = shouldShow ? '' : 'none';
+                    if (shouldShow) visibleCount++;
                 });
 
+                // Update no results message
                 const noResults = document.getElementById('noLogsResults');
                 if (visibleCount === 0) {
                     if (!noResults) {
@@ -634,7 +708,15 @@ if (isset($_GET['get_computers'])) {
                     const status = document.getElementById('logsStatusFilter').value;
                     document.querySelectorAll('.log-row').forEach(row => {
                         const rowStatus = row.dataset.status;
-                        row.style.display = (status === 'all' || status === rowStatus) ? '' : 'none';
+                        if (status === 'all') {
+                            row.style.display = '';
+                        } else if (status === 'approved' && rowStatus === 'approved') {
+                            row.style.display = '';
+                        } else if (status === 'disapproved' && (rowStatus === 'rejected' || rowStatus === 'disapproved')) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
                     });
                 }
             }
@@ -643,7 +725,8 @@ if (isset($_GET['get_computers'])) {
                 // Add data-status attribute to log rows
                 document.querySelectorAll('.log-row').forEach(row => {
                     const statusSpan = row.querySelector('.status-badge');
-                    row.dataset.status = statusSpan.textContent.toLowerCase();
+                    const status = statusSpan.textContent.toLowerCase().trim();
+                    row.dataset.status = status === 'rejected' ? 'disapproved' : status;
                 });
             });
 

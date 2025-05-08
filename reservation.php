@@ -30,11 +30,14 @@ function hasActiveSitIn($conn, $student_id) {
     return $result['count'] > 0;
 }
 
+// Update the hasPendingReservation function to include active reservations without timeout
 function hasPendingReservation($conn, $student_id) {
     $stmt = $conn->prepare("
         SELECT COUNT(*) as count 
         FROM reservations 
-        WHERE student_id = ? AND status = 'pending'
+        WHERE student_id = ? 
+        AND (status = 'pending' 
+             OR (status = 'approved' AND (timeout_at IS NULL OR timeout_at = '')))
     ");
     $stmt->bind_param("i", $student_id);
     $stmt->execute();
@@ -59,9 +62,13 @@ $reservations = [];
 
 // Get student ID from session
 if (!isset($_SESSION['username'])) {
-    error_log("No username in session");
-    die("Session expired. Please login again.");
+    header("Location: login.php");
+    exit();
 }
+
+// Consolidate all checks before any output or redirects
+$canReserve = true;
+$reservationMessage = '';
 
 $username = $_SESSION['username'];
 $stmt = $conn->prepare("SELECT ID_NUMBER FROM users WHERE USERNAME = ?");
@@ -71,19 +78,61 @@ if (!$stmt) {
 }
 
 $stmt->bind_param("s", $username);
-if (!$stmt->execute()) {
-    error_log("Failed to execute statement: " . $stmt->error);
-    die("Database error");
-}
-
+$stmt->execute();
 $result = $stmt->get_result();
-if (!$result || !($user = $result->fetch_assoc())) {
-    error_log("No user found for username: " . $username);
-    die("User not found");
+$user = $result->fetch_assoc();
+$student_id = $user['ID_NUMBER'];
+
+// Do all reservation checks at once
+if (hasActiveSitIn($conn, $student_id)) {
+    $canReserve = false;
+    $reservationMessage = 'You cannot make a new reservation while you have an active sit-in session.';
+} elseif (hasPendingReservation($conn, $student_id)) {
+    $canReserve = false;
+    $reservationMessage = 'You cannot make a new reservation until your current reservation is completed.';
 }
 
-$student_id = $user['ID_NUMBER'];
-error_log("Retrieved student_id: " . $student_id);
+// Handle new reservation submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['lab_room'])) {
+    if (!$canReserve) {
+        $_SESSION['error_message'] = $reservationMessage;
+    } else {
+        try {
+            // Your existing reservation submission code
+            $lab_room = $_POST['lab_room'];
+            $pc_number = $_POST['selected_pc'];
+            $purpose = $_POST['purpose'];
+            $reservation_date = $_POST['date'];
+            $time_in = $_POST['time_in'];
+
+            $insert_stmt = $conn->prepare("
+                INSERT INTO reservations 
+                (student_id, lab_room, pc_number, purpose, reservation_date, time_in, status) 
+                VALUES (?, ?, ?, ?, ?, ?, 'pending')
+            ");
+
+            $insert_stmt->bind_param("isssss", 
+                $student_id, 
+                $lab_room, 
+                $pc_number, 
+                $purpose, 
+                $reservation_date,
+                $time_in
+            );
+
+            if ($insert_stmt->execute()) {
+                $_SESSION['success_message'] = "Reservation submitted successfully!";
+            } else {
+                $_SESSION['error_message'] = "Error creating reservation: " . $insert_stmt->error;
+            }
+            $insert_stmt->close();
+        } catch (Exception $e) {
+            $_SESSION['error_message'] = "Error: " . $e->getMessage();
+        }
+    }
+    header("Location: reservation.php");
+    exit();
+}
 
 // Get student details including full name
 $stmt = $conn->prepare("SELECT CONCAT(FIRSTNAME, ' ', LASTNAME) as fullname FROM users WHERE ID_NUMBER = ?");
@@ -92,13 +141,6 @@ $stmt->execute();
 $result = $stmt->get_result();
 $student = $result->fetch_assoc();
 $_SESSION['fullname'] = $student['fullname'];
-
-// Add this check before the reservation form
-if (hasPendingOrActiveReservation($conn, $student_id)) {
-    $_SESSION['error'] = "You already have a pending reservation. Please wait for admin approval before making another reservation.";
-    header("Location: reservation.php");
-    exit();
-}
 
 // Fetch reservations for the current student
 try {
@@ -134,44 +176,19 @@ try {
     $message = "Error fetching reservations: " . $e->getMessage();
 }
 
-// Handle new reservation submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['lab_room'], $_POST['selected_pc'], $_POST['purpose'], $_POST['date'], $_POST['time_in'])) {
-        try {
-            $student_id = (int)$_POST['student_id'];
-            $lab_room = $_POST['lab_room'];
-            $pc_number = $_POST['selected_pc'];
-            $purpose = $_POST['purpose'];
-            $reservation_date = $_POST['date'];
-            $time_in = $_POST['time_in'];
+// Add message display section at the top of the page content
+if (isset($_SESSION['success_message'])) {
+    echo '<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
+            <span class="block sm:inline">' . htmlspecialchars($_SESSION['success_message']) . '</span>
+          </div>';
+    unset($_SESSION['success_message']);
+}
 
-            $insert_stmt = $conn->prepare("
-                INSERT INTO reservations 
-                (student_id, lab_room, pc_number, purpose, reservation_date, time_in, status) 
-                VALUES (?, ?, ?, ?, ?, ?, 'pending')
-            ");
-
-            $insert_stmt->bind_param("isssss", 
-                $student_id, 
-                $lab_room, 
-                $pc_number, 
-                $purpose, 
-                $reservation_date, 
-                $time_in
-            );
-
-            if (!$insert_stmt->execute()) {
-                throw new Exception("Execute failed: " . $insert_stmt->error);
-            }
-
-            $_SESSION['message'] = 'Reservation submitted successfully!';
-            header("Location: reservation.php");
-            exit();
-        } catch (Exception $e) {
-            error_log("Error in reservation: " . $e->getMessage());
-            $_SESSION['error'] = $e->getMessage();
-        }
-    }
+if (isset($_SESSION['error_message'])) {
+    echo '<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+            <span class="block sm:inline">' . htmlspecialchars($_SESSION['error_message']) . '</span>
+          </div>';
+    unset($_SESSION['error_message']);
 }
 
 // Get available lab rooms
@@ -223,20 +240,6 @@ if (isset($_GET['get_computers'])) {
     exit;
 }
 
-// Add this check before the reservation form
-$canReserve = true;
-$reservationMessage = '';
-
-if (hasActiveSitIn($conn, $student_id)) {
-    $canReserve = false;
-    $reservationMessage = 'You cannot make a new reservation while you have an active sit-in session.';
-}
-
-if (hasPendingReservation($conn, $student_id)) {
-    $canReserve = false;
-    $reservationMessage = 'You already have a pending reservation. Please wait for admin approval.';
-}
-
 // Get filter values
 $status_filter = isset($_GET['status']) ? $_GET['status'] : 'pending'; // Default to pending
 $date_filter = isset($_GET['date']) ? $_GET['date'] : '';
@@ -278,11 +281,11 @@ $stmt->execute();
 $reservations = $stmt->get_result();
 
 // Replace the auto-timeout function with just status checks
-function checkReservation($time_in, $time_out, $reservation_date) {
+function checkReservation($time_in, $reservation_date) {
     $now = new DateTime();
     $date = new DateTime($reservation_date);
     $start = new DateTime($reservation_date . ' ' . $time_in);
-    $end = new DateTime($reservation_date . ' ' . $time_out);
+
     
     if ($now->format('Y-m-d') === $date->format('Y-m-d')) {
         return 'current';
@@ -309,7 +312,7 @@ $reservations = $conn->query("
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lab Reservations</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="bg-gray-100 ">
@@ -317,7 +320,7 @@ $reservations = $conn->query("
     <header class="bg-navy-800 shadow-lg">
         <div class="container mx-auto px-4">
             <nav class="flex items-center justify-between h-16">
-                <h2 class="text-2xl font-bold text-white">Dashboard</h2>
+                <h2 class="text-2xl font-bold text-white">Edit Profile</h2>
                 <div class="flex items-center space-x-8">
                     <ul class="flex space-x-6">
                         <li><a href="#" class="text-white hover:text-yellow-400 transition">Notification</a></li>
@@ -525,8 +528,20 @@ $reservations = $conn->query("
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo date('M d, Y', strtotime($reservation['reservation_date'])); ?></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                             <?php 
-                                            echo date('h:i A', strtotime($reservation['time_in'])) . ' - ' . 
-                                                 date('h:i A', strtotime($reservation['time_out']));
+                                            if (!empty($reservation['time_in'])) {
+                                                $time_in = date('h:i A', strtotime($reservation['time_in']));
+                                                if ($reservation['status'] === 'approved') {
+                                                    if (!empty($reservation['timeout_at'])) {
+                                                        echo $time_in . ' - ' . date('h:i A', strtotime($reservation['timeout_at'])) . ' (Completed)';
+                                                    } else {
+                                                        echo $time_in . ' (Active)';
+                                                    }
+                                                } else {
+                                                    echo $time_in;
+                                                }
+                                            } else {
+                                                echo 'Time not set';
+                                            }
                                             ?>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($reservation['purpose']); ?></td>
@@ -584,6 +599,18 @@ $reservations = $conn->query("
     </div>
 
     <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'navy': {
+                            700: '#000066',
+                            800: '#000080',
+                        }
+                    }
+                }
+            }
+        }
         let selectedComputer = null;
 
         function loadComputers() {
@@ -732,17 +759,7 @@ $reservations = $conn->query("
             document.getElementById('reservationForm').submit();
         });
 
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'navy': {
-                            800: '#000080',
-                        }
-                    }
-                }
-            }
-        }
+        
     </script>
 </body>
 </html>

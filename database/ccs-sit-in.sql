@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 08, 2025 at 11:51 PM
+-- Generation Time: May 08, 2025 at 07:20 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -33,6 +33,13 @@ CREATE TABLE `announcements` (
   `content` text NOT NULL,
   `date_posted` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `announcements`
+--
+
+INSERT INTO `announcements` (`id`, `admin_username`, `content`, `date_posted`) VALUES
+(1, 'admin', 'Sample', '2025-05-08 12:55:35');
 
 -- --------------------------------------------------------
 
@@ -469,7 +476,7 @@ CREATE TABLE `reservations` (
   `purpose` varchar(100) NOT NULL,
   `reservation_date` date NOT NULL,
   `time_in` time NOT NULL,
-  `status` enum('pending','approved','completed','disapproved') DEFAULT 'pending',
+  `status` enum('pending','approved','disapproved') DEFAULT 'pending',
   `timeout_at` datetime DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
@@ -480,7 +487,9 @@ CREATE TABLE `reservations` (
 --
 
 INSERT INTO `reservations` (`id`, `student_id`, `lab_room`, `pc_number`, `purpose`, `reservation_date`, `time_in`, `status`, `timeout_at`, `created_at`, `updated_at`) VALUES
-(1, 11111111, '517', 'PC02', 'C', '2025-05-14', '10:30:00', 'completed', '2025-05-08 23:28:09', '2025-05-08 21:12:42', '2025-05-08 21:28:09');
+(2, 26683320, '524', 'PC01', 'C', '2025-05-15', '10:30:00', 'approved', '2025-05-08 06:24:15', '2025-05-08 04:23:42', '2025-05-08 04:24:15'),
+(3, 26683320, '524', 'PC02', 'C', '2025-05-13', '10:30:00', 'approved', '2025-05-08 06:31:27', '2025-05-08 04:30:42', '2025-05-08 04:31:27'),
+(4, 26683320, '524', 'PC02', 'C', '2025-05-15', '10:30:00', 'approved', '2025-05-08 06:53:41', '2025-05-08 04:52:38', '2025-05-08 04:53:41');
 
 -- --------------------------------------------------------
 
@@ -543,7 +552,7 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`ID`, `ID_NUMBER`, `LASTNAME`, `FIRSTNAME`, `MIDDLENAME`, `COURSE`, `YEAR`, `USERNAME`, `PASSWORD`, `EMAIL`, `ADDRESS`, `SESSION`, `IMAGE`, `CREATED_AT`, `user_type`, `POINTS`) VALUES
-(1, 26683320, 'Monreal', 'Jeff', 'Ranido', 'BSIT', 3, 'j123', '$2y$10$lAJIYBRLFRVoUVjDHIX58.1ijRyVeJtJBZ9gLENVIkr.v26ZMjIdi', 'j123@gmail.com', 'jeff@email.com', 24, NULL, '2025-05-08 14:35:17', 'student', 0),
+(1, 26683320, 'Monreal', 'Jeff', 'Ranido', 'BSIT', 3, 'j123', '$2y$10$lAJIYBRLFRVoUVjDHIX58.1ijRyVeJtJBZ9gLENVIkr.v26ZMjIdi', 'j123@gmail.com', 'jeff@email.com', 23, NULL, '2025-05-08 14:35:17', 'student', 0),
 (2, 999999, 'CSS', 'Admin', NULL, NULL, NULL, 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin@uc.edu.ph', NULL, 30, NULL, '2025-05-08 14:36:00', 'admin', 0),
 (3, 11111111, 'Sagaral', 'Alexus', 'Ranido', 'BSIT', 3, 'alex123', '$2y$10$8TdYXm5.Rrz77MYeGGGZP.OjFnhtm6MfaQsdrYFhmXDWiPyQ9zqT.', 'axie@gmail.com', 'Gudalupe', 28, NULL, '2025-05-08 19:41:40', 'student', 0);
 
@@ -610,7 +619,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `announcements`
 --
 ALTER TABLE `announcements`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `computers`
@@ -634,7 +643,7 @@ ALTER TABLE `lab_rooms`
 -- AUTO_INCREMENT for table `reservations`
 --
 ALTER TABLE `reservations`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `sit_in_sessions`
