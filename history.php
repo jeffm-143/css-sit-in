@@ -21,8 +21,21 @@ $user_id = $_SESSION['user_id']; // Fetch user ID from session
 // Update the feedback insertion query
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['session_id'], $_POST['feedback'])) {
     $session_id = intval($_POST['session_id']);
-    $feedback = preg_replace("/\r\n|\r|\n/", " ", $conn->real_escape_string($_POST['feedback']));
+    
+    // Validate session exists
+    $check_session = $conn->prepare("SELECT id FROM sit_in_sessions WHERE id = ?");
+    $check_session->bind_param("i", $session_id);
+    $check_session->execute();
+    $check_session->store_result();
+    
+    if ($check_session->num_rows === 0) {
+        $_SESSION['message'] = 'Invalid session ID.';
+        header('Location: history.php');
+        exit();
+    }
+    $check_session->close();
 
+    $feedback = preg_replace("/\r\n|\r|\n/", " ", $conn->real_escape_string($_POST['feedback']));
     $sql = "INSERT INTO feedback (session_id, user_id, comments) VALUES (?, ?, ?)";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param('iis', $session_id, $user_id, $feedback);

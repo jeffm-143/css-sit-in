@@ -33,7 +33,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_id'])) {
 
 // Fetch feedback records
 $feedbacks = $conn->query("
-    SELECT f.id, f.comments, f.created_at, s.lab_room, s.purpose, s.start_time, u.ID_NUMBER, u.FIRSTNAME, u.LASTNAME
+    SELECT f.id, f.comments, f.created_at, s.lab_room, s.purpose, s.start_time, 
+           u.ID_NUMBER, u.FIRSTNAME, u.LASTNAME
     FROM feedback f
     JOIN sit_in_sessions s ON f.session_id = s.id
     JOIN users u ON s.student_id = u.ID_NUMBER
@@ -84,9 +85,7 @@ $feedbacks = $conn->query("
                                 <td class="px-4 py-2 text-gray-800 text-center"><?php echo htmlspecialchars($feedback['lab_room']); ?></td>
                                 <td class="px-4 py-2 text-gray-800 text-center"><?php echo htmlspecialchars($feedback['purpose']); ?></td>
                                 <td class="px-4 py-2 text-gray-800 text-center"><?php echo date('M d, Y', strtotime($feedback['created_at'])); ?></td>
-                                <td class="px-4 py-2 text-gray-800 text-center truncate max-w-xs" title="<?php echo htmlspecialchars($feedback['comments']); ?>">
-                                    <?php echo nl2br(htmlspecialchars(preg_replace("/\r\n|\r|\n/", " ", $feedback['comments']))); ?>
-                                </td>
+                                <td class="px-4 py-2 text-gray-800 text-center truncate max-w-xs" title="<?php echo htmlspecialchars($feedback['comments']); ?>"><?php echo nl2br(htmlspecialchars(preg_replace("/\r\n|\r|\n/", " ", $feedback['comments']))); ?></td>
                                 <td class="px-4 py-2 text-center">
                                     <form method="POST">
                                         <input type="hidden" name="delete_id" value="<?php echo $feedback['id']; ?>">

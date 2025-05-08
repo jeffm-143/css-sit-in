@@ -17,10 +17,10 @@ if ($conn->connect_error) {
 }
 
 $user = $_SESSION['username'];
-$stmt = $conn->prepare("SELECT ID_NUMBER, LASTNAME, FIRSTNAME, MIDDLENAME, COURSE, YEAR, EMAIL, ADDRESS, IMAGE, SESSION FROM users WHERE USERNAME = ?");
+$stmt = $conn->prepare("SELECT ID_NUMBER, LASTNAME, FIRSTNAME, MIDDLENAME, COURSE, YEAR, EMAIL, ADDRESS, IMAGE, SESSION, POINTS FROM users WHERE USERNAME = ?");
 $stmt->bind_param("s", $user);
 $stmt->execute();
-$stmt->bind_result($IDNO, $lName, $fName, $MdName, $Course, $Yrlevel, $email, $address, $profile_image, $session);
+$stmt->bind_result($IDNO, $lName, $fName, $MdName, $Course, $Yrlevel, $email, $address, $profile_image, $session, $points);
 $stmt->fetch();
 $stmt->close();
 
@@ -46,6 +46,7 @@ $conn->close();
     <title>Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
     <!-- Navigation -->
@@ -67,7 +68,28 @@ $conn->close();
         </div>
     </header>
 
-    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+                title: 'Welcome, <?php echo htmlspecialchars($fName . ' ' . $lName); ?>!',
+                text: 'College of Computer Studies Student Dashboard',
+                icon: 'success',
+                timer: 1500,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end',
+                customClass: {
+                    popup: 'bg-gradient-to-r from-navy-800 to-blue-600 text-white',
+                    title: 'text-white',
+                    content: 'text-blue-100'
+                },
+                background: 'rgb(0, 0, 128)',
+                color: '#ffffff'
+            });
+        });
+    </script>
+
     <!-- Main Content -->
     <main class="container mx-auto px-4 py-8 max-w-7xl">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -91,6 +113,14 @@ $conn->close();
                         <div class="flex items-center py-2">
                             <i class="fas fa-clock w-5 text-navy-800"></i>
                             <span class="text-gray-600 ml-3"><?php echo htmlspecialchars($Yrlevel); ?> Year</span>
+                        </div>
+                        <div class="flex items-center py-2">
+                            <i class="fas fa-ticket-alt w-5 text-navy-800"></i>
+                            <span class="text-gray-600 ml-3">Remaining Sessions: <?php echo htmlspecialchars($session); ?></span>
+                        </div>
+                        <div class="flex items-center py-2">
+                            <i class="fas fa-star w-5 text-navy-800"></i>
+                            <span class="text-gray-600 ml-3">Points: <?php echo htmlspecialchars($points); ?>/3</span>
                         </div>
                         <div class="flex items-center py-2">
                             <i class="fas fa-envelope w-5 text-navy-800"></i>

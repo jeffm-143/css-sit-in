@@ -21,6 +21,8 @@ SET time_zone = "+00:00";
 -- Database: `css_sit_in`
 --
 
+/*pupose: C programming,c#,java,php,Database, DIgital Logic & Design, Embedded Systems & Iot, Python Programming, Systems Integration & Architecture, Computer Application, Web Design & Development
+Labs: 524, 526,528,530,542,544,517 */
 -- --------------------------------------------------------
 
 --
@@ -38,6 +40,68 @@ CREATE TABLE `announcements` (
 -- Dumping data for table `announcements`
 --
 
+-- Create table for computer labs
+CREATE TABLE lab_rooms (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    room_number VARCHAR(10) NOT NULL,
+    total_computers INT NOT NULL DEFAULT 50,
+    status ENUM('active', 'inactive') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create table for computers
+CREATE TABLE computers (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    pc_number VARCHAR(10) NOT NULL,
+    lab_room_id VARCHAR(10) NOT NULL,
+    status ENUM('available', 'in_use', 'maintenance') DEFAULT 'available',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_pc_lab (pc_number, lab_room_id)
+);
+
+-- Create table for reservations
+CREATE TABLE reservations (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    student_id INT NOT NULL,
+    lab_room VARCHAR(10) NOT NULL,
+    pc_number VARCHAR(10) NOT NULL,
+    purpose VARCHAR(100) NOT NULL,
+    reservation_date DATE NOT NULL,
+    time_in TIME NOT NULL,
+    status ENUM('pending', 'approved', 'completed', 'disapproved') DEFAULT 'pending',
+    timeout_at DATETIME DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES users(ID_NUMBER)
+);
+ALTER TABLE sit_in_sessions 
+ADD COLUMN reservation_id INT,
+ADD FOREIGN KEY (reservation_id) REFERENCES reservations(id);
+
+-- Insert default lab rooms
+INSERT INTO lab_rooms (room_number, total_computers, status) VALUES
+('524', 50, 'active'),
+('526', 50, 'active'),
+('528', 50, 'active'),
+('530', 50, 'active'),
+('542', 50, 'active'),
+('544', 50, 'active'),
+('517', 50, 'active');
+
+-- Insert sample computers for each lab room
+INSERT INTO computers (pc_number, lab_room_id, status) 
+SELECT 
+    CONCAT('PC', LPAD(numbers.n, 2, '0')), 
+    lab_rooms.room_number,
+    'available'
+FROM 
+    (SELECT 1 + tens.i + ones.i AS n
+     FROM 
+         (SELECT 0 i UNION SELECT 10 UNION SELECT 20 UNION SELECT 30 UNION SELECT 40) tens,
+         (SELECT 0 i UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) ones
+     WHERE 1 + tens.i + ones.i <= 50
+    ) numbers
+CROSS JOIN lab_rooms;
 
 -- --------------------------------------------------------
 
@@ -45,14 +109,18 @@ CREATE TABLE `announcements` (
 -- Table structure for table `feedback`
 --
 
-CREATE TABLE `feedback` (
-  `posID` int(11) NOT NULL,
-  `pos_Name` int(11) DEFAULT NULL,
-  `user_id` int(11) NOT NULL,
-  `rating` int(11) DEFAULT NULL,
-  `comments` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+-- Create feedback table with all required columns
+CREATE TABLE feedback (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    session_id INT,
+    user_id INT NOT NULL,
+    rating INT,
+    comments TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_id) REFERENCES sit_in_sessions(id),
+    FOREIGN KEY (user_id) REFERENCES users(ID)
+);
+
 
 --
 -- Dumping data for table `feedback`

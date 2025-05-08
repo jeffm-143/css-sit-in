@@ -2,9 +2,8 @@
 session_start();
 require_once 'database.php';
 
-if (isset($_POST['end_session'])) {
-    // Handle direct sit-in timeout only
-    $session_id = $_POST['session_id'];
+if (isset($_POST['end_reservation'])) {
+    $reservation_id = $_POST['reservation_id'];
     $student_id = $_POST['student_id'];
     $end_time = date('Y-m-d H:i:s');
     
@@ -12,12 +11,12 @@ if (isset($_POST['end_session'])) {
     $conn->begin_transaction();
     
     try {
-        // Update sit-in session status
-        $stmt = $conn->prepare("UPDATE sit_in_sessions SET status = 'completed', end_time = ? WHERE id = ?");
-        $stmt->bind_param("si", $end_time, $session_id);
+        // Update reservation status
+        $stmt = $conn->prepare("UPDATE reservations SET status = 'completed', timeout_at = ? WHERE id = ?");
+        $stmt->bind_param("si", $end_time, $reservation_id);
         
         if ($stmt->execute()) {
-            // Update session count for direct sit-ins
+            // Update session count
             $count_stmt = $conn->prepare("SELECT SESSION FROM users WHERE ID_NUMBER = ?");
             $count_stmt->bind_param("s", $student_id);
             $count_stmt->execute();
@@ -29,9 +28,9 @@ if (isset($_POST['end_session'])) {
             $update_session->execute();
             
             $conn->commit();
-            $_SESSION['success'] = "Direct sit-in ended. Student has " . $new_session . " sessions remaining.";
+            $_SESSION['success'] = "Reservation completed. Student has " . $new_session . " sessions remaining.";
         } else {
-            throw new Exception("Failed to end session");
+            throw new Exception("Failed to complete reservation");
         }
     } catch (Exception $e) {
         $conn->rollback();

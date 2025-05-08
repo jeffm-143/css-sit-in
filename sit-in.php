@@ -2,22 +2,49 @@
 session_start();
 require_once 'database.php';
 
-// Update query to order by sit-in ID
-$active_sessions = $conn->query("
+// Fetch direct sit-in sessions (from sit_in_sessions table)
+$direct_sessions = $conn->query("
     SELECT 
         s.id as sit_id,
-        u.ID_NUMBER as IDNO,
+        s.student_id,
+        s.lab_room,
+        s.purpose,
+        s.status,
+        s.start_time,
         u.FIRSTNAME,
         u.LASTNAME,
-        s.purpose,
-        s.lab_room,
-        u.SESSION,
-        s.status,
-        TIMESTAMPDIFF(MINUTE, s.start_time, CURRENT_TIMESTAMP) as elapsed_time
+        u.ID_NUMBER,
+        u.SESSION
     FROM sit_in_sessions s
     JOIN users u ON s.student_id = u.ID_NUMBER
-    WHERE s.status = 'active'
-    ORDER BY s.id ASC
+    WHERE s.status = 'active' 
+    ORDER BY s.start_time DESC
+");
+
+// Get current time and date
+$current_date = date('Y-m-d');
+$current_time = date('H:i:s');
+
+// Fetch active reservations for current time
+$reservation_sessions = $conn->query("
+    SELECT 
+        r.id,
+        r.student_id,
+        r.lab_room,
+        r.pc_number,
+        r.purpose,
+        r.reservation_date,
+        r.time_in,
+        r.status,
+        r.timeout_at,
+        u.FIRSTNAME,
+        u.LASTNAME,
+        u.ID_NUMBER,
+        u.SESSION
+    FROM reservations r
+    JOIN users u ON r.student_id = u.ID_NUMBER
+    WHERE r.status = 'approved'
+    ORDER BY r.time_in ASC
 ");
 
 if (isset($_POST['end_session'])) {
@@ -51,6 +78,24 @@ if (isset($_POST['end_session'])) {
     exit();
 }
 
+// Handle reservation timeout with end time tracking
+if (isset($_POST['end_reservation'])) {
+    $reservation_id = $_POST['reservation_id'];
+    $timeout_at = date('Y-m-d H:i:s');
+    
+    $stmt = $conn->prepare("UPDATE reservations SET status = 'completed', timeout_at = ? WHERE id = ?");
+    $stmt->bind_param("si", $timeout_at, $reservation_id);
+    
+    if ($stmt->execute()) {
+        $_SESSION['success'] = "Reservation has been completed successfully.";
+    } else {
+        $_SESSION['error'] = "Failed to complete the reservation.";
+    }
+    
+    header("Location: sit-in.php");
+    exit();
+}
+
 // Function to check if student has active sit-in
 function hasActiveSitIn($conn, $student_id) {
     $stmt = $conn->prepare("SELECT id FROM sit_in_sessions WHERE student_id = ? AND status = 'active'");
@@ -60,16 +105,47 @@ function hasActiveSitIn($conn, $student_id) {
     return $result->num_rows > 0;
 }
 
-// Process form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Add this function to check student reservations
+function hasActiveReservation($conn, $student_id) {
+    $stmt = $conn->prepare("
+        SELECT COUNT(*) as count 
+        FROM reservations 
+        WHERE student_id = ? 
+        AND status = 'approved' 
+        AND reservation_date = CURRENT_DATE
+        AND time_in <= CURRENT_TIME 
+        AND time_out >= CURRENT_TIME
+    ");
+    $stmt->bind_param("i", $student_id);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc()['count'] > 0;
+}
+
+// Process direct sit-in
+if (isset($_POST['start_sitin'])) {
     $student_id = $_POST['student_id'];
-    $purpose = $_POST['purpose'];
     $lab_room = $_POST['lab_room'];
-
-
-    // Existing sit-in creation code
-    $stmt = $conn->prepare("INSERT INTO sit_in_sessions (student_id, purpose, lab_room, status) VALUES (?, ?, ?, 'active')");
-    // ...existing code...
+    $purpose = $_POST['purpose'];
+    
+    // Check if student has active sit-in
+    if (hasActiveSitIn($conn, $student_id)) {
+        $_SESSION['error'] = "You already have an active sit-in session.";
+    } 
+    // Check if student has active reservation
+    elseif (hasActiveReservation($conn, $student_id)) {
+        $_SESSION['error'] = "You have an approved reservation for this time. Please use that instead.";
+    }
+    else {
+        $stmt = $conn->prepare("INSERT INTO sit_in_sessions (student_id, lab_room, purpose, status) VALUES (?, ?, ?, 'active')");
+        $stmt->bind_param("iss", $student_id, $lab_room, $purpose);
+        if ($stmt->execute()) {
+            $_SESSION['success'] = "Sit-in session started successfully.";
+        } else {
+            $_SESSION['error'] = "Failed to start sit-in session.";
+        }
+    }
+    header("Location: sit-in.php");
+    exit();
 }
 ?>
 
@@ -84,45 +160,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="bg-gray-100">
 <?php include 'admin-nav.php'; ?>
 
-    <div class="max-w-7xl mx-auto p-6">
+    <div class="max-w-7xl mx-auto p-6 space-y-6">
+        <!-- Direct Sit-in Table -->
         <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-2xl font-bold mb-6 text-center">Current Sit in</h2>
-            
-            <?php if ($active_sessions->num_rows > 0): ?>
+            <h2 class="text-2xl font-bold mb-6 text-center">Direct Sit-in Sessions</h2>
+            <?php if ($direct_sessions && $direct_sessions->num_rows > 0): ?>
                 <div class="overflow-x-auto">
                     <table class="min-w-full table-auto">
                         <thead class="bg-gray-100">
                             <tr>
-                                <th class="px-4 py-2">IDNO</th>
-                                <th class="px-4 py-2">First Name</th>
-                                <th class="px-4 py-2">Last Name</th>
-                                <th class="px-4 py-2">Purpose</th>
+                                <th class="px-4 py-2">Student ID</th>
+                                <th class="px-4 py-2">Name</th>
                                 <th class="px-4 py-2">Laboratory</th>
-                                <th class="px-4 py-2">Session</th>
-                                <th class="px-4 py-2">Status</th>
+                                <th class="px-4 py-2">Purpose</th>
+                                <th class="px-4 py-2">Start Time</th>
+                                <th class="px-4 py-2">Sessions Left</th>
                                 <th class="px-4 py-2">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php while ($session = $active_sessions->fetch_assoc()): ?>
+                            <?php while ($session = $direct_sessions->fetch_assoc()): ?>
                                 <tr>
-                                    <td class="border px-4 py-2"><?php echo htmlspecialchars($session['IDNO']); ?></td>
-                                    <td class="border px-4 py-2"><?php echo htmlspecialchars($session['FIRSTNAME']); ?></td>
-                                    <td class="border px-4 py-2"><?php echo htmlspecialchars($session['LASTNAME']); ?></td>
-                                    <td class="border px-4 py-2"><?php echo htmlspecialchars($session['purpose']); ?></td>
-                                    <td class="border px-4 py-2">Room <?php echo htmlspecialchars($session['lab_room']); ?></td>
-                                    <td class="border px-4 py-2"><?php echo htmlspecialchars($session['SESSION']); ?></td>
+                                    <td class="border px-4 py-2"><?php echo htmlspecialchars($session['ID_NUMBER']); ?></td>
                                     <td class="border px-4 py-2">
-                                        <span class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                                            Active
-                                        </span>
+                                        <?php echo htmlspecialchars($session['FIRSTNAME'] . ' ' . $session['LASTNAME']); ?>
                                     </td>
+                                    <td class="border px-4 py-2">Room <?php echo htmlspecialchars($session['lab_room']); ?></td>
+                                    <td class="border px-4 py-2"><?php echo htmlspecialchars($session['purpose']); ?></td>
+                                    <td class="border px-4 py-2">
+                                        <?php echo date('h:i A', strtotime($session['start_time'])); ?>
+                                    </td>
+                                    <td class="border px-4 py-2"><?php echo htmlspecialchars($session['SESSION']); ?></td>
                                     <td class="border px-4 py-2">
                                         <form method="POST" action="end_session.php" class="inline text-center">
                                             <input type="hidden" name="session_id" value="<?php echo $session['sit_id']; ?>">
-                                            <input type="hidden" name="student_id" value="<?php echo $session['IDNO']; ?>">
+                                            <input type="hidden" name="student_id" value="<?php echo $session['ID_NUMBER']; ?>">
                                             <button type="submit" name="end_session" 
-                                                    class="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700 block mx-auto">
+                                                    class="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700">
                                                 Time Out
                                             </button>
                                         </form>
@@ -134,7 +208,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             <?php else: ?>
                 <div class="text-center py-8 text-gray-500">
-                    No active sit-in sessions at the moment.
+                    No active direct sit-in sessions at the moment.
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- Reservation-based Sessions Table -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-bold mb-6 text-center">Reservation-based Sessions</h2>
+            <?php if ($reservation_sessions && $reservation_sessions->num_rows > 0): ?>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full table-auto">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-2">Student ID</th>
+                                <th class="px-4 py-2">Name</th>
+                                <th class="px-4 py-2">Laboratory</th>
+                                <th class="px-4 py-2">PC Number</th>
+                                <th class="px-4 py-2">Purpose</th>
+                                <th class="px-4 py-2">Time</th>
+                                <th class="px-4 py-2">Sessions Left</th>
+                                <th class="px-4 py-2">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php while ($reservation = $reservation_sessions->fetch_assoc()): ?>
+                                <tr>
+                                    <td class="border px-4 py-2"><?php echo htmlspecialchars($reservation['ID_NUMBER']); ?></td>
+                                    <td class="border px-4 py-2">
+                                        <?php echo htmlspecialchars($reservation['FIRSTNAME'] . ' ' . $reservation['LASTNAME']); ?>
+                                    </td>
+                                    <td class="border px-4 py-2">Room <?php echo htmlspecialchars($reservation['lab_room']); ?></td>
+                                    <td class="border px-4 py-2"><?php echo htmlspecialchars($reservation['pc_number']); ?></td>
+                                    <td class="border px-4 py-2"><?php echo htmlspecialchars($reservation['purpose']); ?></td>
+                                    <td class="border px-4 py-2">
+                                        <?php 
+                                        echo date('h:i A', strtotime($reservation['time_in'])) . ' - ' . 
+                                             ($reservation['timeout_at'] ? date('h:i A', strtotime($reservation['timeout_at'])) : 'Ongoing'); 
+                                        ?>
+                                    </td>
+                                    <td class="border px-4 py-2"><?php echo htmlspecialchars($reservation['SESSION']); ?></td>
+                                    <td class="border px-4 py-2">
+                                        <form method="POST" action="end_reservation.php" class="inline text-center">
+                                            <input type="hidden" name="reservation_id" value="<?php echo $reservation['id']; ?>">
+                                            <input type="hidden" name="student_id" value="<?php echo $reservation['ID_NUMBER']; ?>">
+                                            <button type="submit" name="end_reservation" 
+                                                    class="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700">
+                                                Time Out
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php else: ?>
+                <div class="text-center py-8 text-gray-500">
+                    No active reservation-based sessions at the moment.
                 </div>
             <?php endif; ?>
         </div>
