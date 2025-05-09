@@ -195,125 +195,189 @@ if (isset($_POST['start_sitin'])) {
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100">
-<?php include 'admin-nav.php'; ?>
+    <?php include 'admin-nav.php'; ?>
 
-    <div class="max-w-7xl mx-auto p-6 space-y-6">
-        <!-- Direct Sit-in Table -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-2xl font-bold mb-6 text-center">Direct Sit-in Sessions</h2>
-            <?php if ($direct_sessions && $direct_sessions->num_rows > 0): ?>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full table-auto">
-                        <thead class="bg-gray-100">
-                            <tr>
-                                <th class="px-4 py-2">Student ID</th>
-                                <th class="px-4 py-2">Name</th>
-                                <th class="px-4 py-2">Laboratory</th>
-                                <th class="px-4 py-2">Purpose</th>
-                                <th class="px-4 py-2">Start Time</th>
-                                <th class="px-4 py-2">Sessions Left</th>
-                                <th class="px-4 py-2">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php while ($session = $direct_sessions->fetch_assoc()): ?>
-                                <tr>
-                                    <td class="border px-4 py-2"><?php echo htmlspecialchars($session['ID_NUMBER']); ?></td>
-                                    <td class="border px-4 py-2">
-                                        <?php echo htmlspecialchars($session['FIRSTNAME'] . ' ' . $session['LASTNAME']); ?>
-                                    </td>
-                                    <td class="border px-4 py-2">Room <?php echo htmlspecialchars($session['lab_room']); ?></td>
-                                    <td class="border px-4 py-2"><?php echo htmlspecialchars($session['purpose']); ?></td>
-                                    <td class="border px-4 py-2">
-                                        <?php echo date('h:i A', strtotime($session['start_time'])); ?>
-                                    </td>
-                                    <td class="border px-4 py-2"><?php echo htmlspecialchars($session['SESSION']); ?></td>
-                                    <td class="border px-4 py-2">
-                                        <form method="POST" action="end_session.php" class="inline text-center">
-                                            <input type="hidden" name="session_id" value="<?php echo $session['sit_id']; ?>">
-                                            <input type="hidden" name="student_id" value="<?php echo $session['ID_NUMBER']; ?>">
-                                            <button type="submit" name="end_session" 
-                                                    class="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700">
-                                                Time Out
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            <?php endwhile; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php else: ?>
-                <div class="text-center py-8 text-gray-500">
-                    No active direct sit-in sessions at the moment.
-                </div>
-            <?php endif; ?>
+    <div class="max-w-7xl mx-auto p-6">
+        <!-- Tab Navigation -->
+        <div class="mb-4 border-b border-gray-200">
+            <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" role="tablist">
+                <li class="mr-2" role="presentation">
+                    <button class="inline-block p-4 rounded-t-lg border-b-2 border-blue-600 text-blue-600 active" 
+                            id="direct-tab" 
+                            data-tabs-target="#direct" 
+                            type="button" 
+                            role="tab" 
+                            aria-controls="direct" 
+                            aria-selected="true">
+                        Direct Sit-in Sessions
+                    </button>
+                </li>
+                <li class="mr-2" role="presentation">
+                    <button class="inline-block p-4 rounded-t-lg border-b-2 border-transparent hover:text-gray-600 hover:border-gray-300" 
+                            id="reservation-tab" 
+                            data-tabs-target="#reservation" 
+                            type="button" 
+                            role="tab" 
+                            aria-controls="reservation" 
+                            aria-selected="false">
+                        Reservation-based Sessions
+                    </button>
+                </li>
+            </ul>
         </div>
 
-        <!-- Reservation-based Sessions Table -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-2xl font-bold mb-6 text-center">Reservation-based Sessions</h2>
-            <?php if ($reservation_sessions && $reservation_sessions->num_rows > 0): ?>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full table-auto">
-                        <thead class="bg-gray-100">
-                            <tr>
-                                <th class="px-4 py-2">Student ID</th>
-                                <th class="px-4 py-2">Name</th>
-                                <th class="px-4 py-2">Laboratory</th>
-                                <th class="px-4 py-2">PC Number</th>
-                                <th class="px-4 py-2">Purpose</th>
-                                <th class="px-4 py-2">Time</th>
-                                <th class="px-4 py-2">Sessions Left</th>
-                                <th class="px-4 py-2">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php while ($reservation = $reservation_sessions->fetch_assoc()): ?>
-                                <tr>
-                                    <td class="border px-4 py-2"><?php echo htmlspecialchars($reservation['ID_NUMBER']); ?></td>
-                                    <td class="border px-4 py-2">
-                                        <?php echo htmlspecialchars($reservation['FIRSTNAME'] . ' ' . $reservation['LASTNAME']); ?>
-                                    </td>
-                                    <td class="border px-4 py-2">Room <?php echo htmlspecialchars($reservation['lab_room']); ?></td>
-                         <td class="border px-4 py-2"><?php echo htmlspecialchars($reservation['pc_number']); ?></td>
-                                    <td class="border px-4 py-2"><?php echo htmlspecialchars($reservation['purpose']); ?></td>
-                                    <td class="border px-4 py-2">
-                                        <?php 
-                                        echo date('h:i A', strtotime($reservation['time_in'])) . ' - ' . 
-                                             ($reservation['timeout_at'] ? date('h:i A', strtotime($reservation['timeout_at'])) : 'Ongoing'); 
-                                        ?>
-                                    </td>
-                                    <td class="border px-4 py-2"><?php echo htmlspecialchars($reservation['SESSION']); ?></td>
-                                    <td class="border px-4 py-2">
-                                        <?php 
-                                        if (empty($reservation['timeout_at'])): 
-                                        ?>
-                                            <form method="POST" class="inline text-center">
-                                                <input type="hidden" name="reservation_id" value="<?php echo $reservation['id']; ?>">
-                                                <input type="hidden" name="student_id" value="<?php echo $reservation['ID_NUMBER']; ?>">
-                                                <button type="submit" name="end_reservation" 
-                                                        class="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700">
-                                                    Record Timeout
-                                                </button>
-                                            </form>
-                                        <?php else: ?>
-                                            <span class="text-gray-500">
-                                                Timed out at <?php echo date('h:i A', strtotime($reservation['timeout_at'])); ?>
-                                            </span>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                            <?php endwhile; ?>
-                        </tbody>
-                    </table>
+        <!-- Tab Content -->
+        <div id="tabContent">
+            <!-- Direct Sit-in Tab -->
+            <div class="block" id="direct" role="tabpanel" aria-labelledby="direct-tab">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-bold mb-6 text-center">Direct Sit-in Sessions</h2>
+                    <?php if ($direct_sessions && $direct_sessions->num_rows > 0): ?>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full table-auto">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="px-4 py-2">Student ID</th>
+                                        <th class="px-4 py-2">Name</th>
+                                        <th class="px-4 py-2">Laboratory</th>
+                                        <th class="px-4 py-2">Purpose</th>
+                                        <th class="px-4 py-2">Start Time</th>
+                                        <th class="px-4 py-2">Sessions Left</th>
+                                        <th class="px-4 py-2">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php while ($session = $direct_sessions->fetch_assoc()): ?>
+                                        <tr>
+                                            <td class="border px-4 py-2"><?php echo htmlspecialchars($session['ID_NUMBER']); ?></td>
+                                            <td class="border px-4 py-2">
+                                                <?php echo htmlspecialchars($session['FIRSTNAME'] . ' ' . $session['LASTNAME']); ?>
+                                            </td>
+                                            <td class="border px-4 py-2">Room <?php echo htmlspecialchars($session['lab_room']); ?></td>
+                                            <td class="border px-4 py-2"><?php echo htmlspecialchars($session['purpose']); ?></td>
+                                            <td class="border px-4 py-2">
+                                                <?php echo date('h:i A', strtotime($session['start_time'])); ?>
+                                            </td>
+                                            <td class="border px-4 py-2"><?php echo htmlspecialchars($session['SESSION']); ?></td>
+                                            <td class="border px-4 py-2">
+                                                <form method="POST" action="end_session.php" class="inline text-center">
+                                                    <input type="hidden" name="session_id" value="<?php echo $session['sit_id']; ?>">
+                                                    <input type="hidden" name="student_id" value="<?php echo $session['ID_NUMBER']; ?>">
+                                                    <button type="submit" name="end_session" 
+                                                            class="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700">
+                                                        Time Out
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endwhile; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-center py-8 text-gray-500">
+                            No active direct sit-in sessions at the moment.
+                        </div>
+                    <?php endif; ?>
                 </div>
-            <?php else: ?>
-                <div class="text-center py-8 text-gray-500">
-                    No active reservation-based sessions at the moment.
+            </div>
+
+            <!-- Reservation-based Tab -->
+            <div class="hidden" id="reservation" role="tabpanel" aria-labelledby="reservation-tab">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-bold mb-6 text-center">Reservation-based Sessions</h2>
+                    <?php if ($reservation_sessions && $reservation_sessions->num_rows > 0): ?>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full table-auto">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="px-4 py-2">Student ID</th>
+                                        <th class="px-4 py-2">Name</th>
+                                        <th class="px-4 py-2">Laboratory</th>
+                                        <th class="px-4 py-2">PC Number</th>
+                                        <th class="px-4 py-2">Purpose</th>
+                                        <th class="px-4 py-2">Time</th>
+                                        <th class="px-4 py-2">Sessions Left</th>
+                                        <th class="px-4 py-2">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php while ($reservation = $reservation_sessions->fetch_assoc()): ?>
+                                        <tr>
+                                            <td class="border px-4 py-2"><?php echo htmlspecialchars($reservation['ID_NUMBER']); ?></td>
+                                            <td class="border px-4 py-2">
+                                                <?php echo htmlspecialchars($reservation['FIRSTNAME'] . ' ' . $reservation['LASTNAME']); ?>
+                                            </td>
+                                            <td class="border px-4 py-2">Room <?php echo htmlspecialchars($reservation['lab_room']); ?></td>
+                                            <td class="border px-4 py-2"><?php echo htmlspecialchars($reservation['pc_number']); ?></td>
+                                            <td class="border px-4 py-2"><?php echo htmlspecialchars($reservation['purpose']); ?></td>
+                                            <td class="border px-4 py-2">
+                                                <?php 
+                                                echo date('h:i A', strtotime($reservation['time_in'])) . ' - ' . 
+                                                     ($reservation['timeout_at'] ? date('h:i A', strtotime($reservation['timeout_at'])) : 'Ongoing'); 
+                                                ?>
+                                            </td>
+                                            <td class="border px-4 py-2"><?php echo htmlspecialchars($reservation['SESSION']); ?></td>
+                                            <td class="border px-4 py-2">
+                                                <?php 
+                                                if (empty($reservation['timeout_at'])): 
+                                                ?>
+                                                    <form method="POST" class="inline text-center">
+                                                        <input type="hidden" name="reservation_id" value="<?php echo $reservation['id']; ?>">
+                                                        <input type="hidden" name="student_id" value="<?php echo $reservation['ID_NUMBER']; ?>">
+                                                        <button type="submit" name="end_reservation" 
+                                                                class="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700">
+                                                            Record Timeout
+                                                        </button>
+                                                    </form>
+                                                <?php else: ?>
+                                                    <span class="text-gray-500">
+                                                        Timed out at <?php echo date('h:i A', strtotime($reservation['timeout_at'])); ?>
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endwhile; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-center py-8 text-gray-500">
+                            No active reservation-based sessions at the moment.
+                        </div>
+                    <?php endif; ?>
                 </div>
-            <?php endif; ?>
+            </div>
         </div>
     </div>
+
+    <script>
+        // Tab functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabs = document.querySelectorAll('[role="tab"]');
+            const tabPanels = document.querySelectorAll('[role="tabpanel"]');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Reset all tabs and panels
+                    tabs.forEach(t => {
+                        t.classList.remove('border-blue-600', 'text-blue-600');
+                        t.classList.add('border-transparent');
+                        t.setAttribute('aria-selected', 'false');
+                    });
+                    tabPanels.forEach(p => p.classList.add('hidden'));
+
+                    // Activate clicked tab
+                    this.classList.remove('border-transparent');
+                    this.classList.add('border-blue-600', 'text-blue-600');
+                    this.setAttribute('aria-selected', 'true');
+
+                    // Show corresponding panel
+                    const panelId = this.getAttribute('data-tabs-target').substring(1);
+                    document.getElementById(panelId).classList.remove('hidden');
+                });
+            });
+        });
+    </script>
 </body>
 </html>

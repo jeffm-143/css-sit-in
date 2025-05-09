@@ -5,6 +5,12 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 
+$showWelcome = false;
+if (isset($_SESSION['show_welcome']) && $_SESSION['show_welcome'] === true) {
+    $showWelcome = true;
+    unset($_SESSION['show_welcome']); // Remove the flag after showing welcome
+}
+
 $host = 'localhost';  
 $username = 'root';  
 $password = '';      
@@ -50,97 +56,118 @@ $conn->close();
 </head>
 <body class="bg-gray-100 min-h-screen">
     <!-- Navigation -->
-    <header class="bg-navy-800 shadow-lg">
+    <header class="bg-gradient-to-r from-blue-800 to-indigo-800 shadow-lg">
         <div class="container mx-auto px-4">
             <nav class="flex items-center justify-between h-16">
                 <h2 class="text-2xl font-bold text-white">Dashboard</h2>
                 <div class="flex items-center space-x-8">
                     <ul class="flex space-x-6">
-                        <li><a href="#" class="text-white hover:text-yellow-400 transition">Notification</a></li>
-                        <li><a href="dashboard.php" class="text-white hover:text-yellow-400 transition">Home</a></li>
-                        <li><a href="edit_profile.php" class="text-white hover:text-yellow-400 transition">Edit Profile</a></li>
-                        <li><a href="history.php" class="text-white hover:text-yellow-400 transition">History</a></li>
-                        <li><a href="reservation.php" class="text-white hover:text-yellow-400 transition">Reservation</a></li>
+                        <li><a href="#" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-bell mr-1"></i>Notification</a></li>
+                        <li><a href="dashboard.php" class="text-yellow-400 font-bold transition-colors"><i class="fas fa-home mr-1"></i>Home</a></li>
+                        <li><a href="edit_profile.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-user-edit mr-1"></i>Edit Profile</a></li>
+                        <li><a href="history.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-history mr-1"></i>History</a></li>
+                        <li><a href="reservation.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-calendar-alt mr-1"></i>Reservation</a></li>
                     </ul>
-                    <a href="logout.php" class="bg-yellow-400 text-navy-800 px-4 py-2 rounded-lg font-bold hover:bg-navy-800 hover:text-yellow-400 transition duration-300">Log out</a>
+                    <a href="logout.php" class="bg-yellow-400 text-indigo-900 px-6 py-2 rounded-lg font-bold hover:bg-yellow-500 transition duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                        <i class="fas fa-sign-out-alt mr-1"></i>Log out
+                    </a>
                 </div>
             </nav>
         </div>
     </header>
 
+    <?php if ($showWelcome): ?>
+    <div id="welcomeMessage" class="fixed top-20 right-4 z-50">
+        <div class="bg-gradient-to-r from-blue-800 to-indigo-800 text-white rounded-lg shadow-lg p-4 max-w-sm transform transition-all duration-500 opacity-100 translate-x-0">
+            <div class="text-center">
+                <h2 class="text-xl font-bold">Welcome, <?php echo htmlspecialchars($fName . ' ' . $lName); ?>!</h2>
+                <p class="text-base">College of Computer Studies Student Dashboard</p>
+                <div class="mt-4">
+                    <div class="relative w-full h-2 bg-gray-300 rounded-full overflow-hidden">
+                        <div id="progressBar" class="absolute top-0 left-0 h-full bg-yellow-400 transition-all"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            Swal.fire({
-                title: 'Welcome, <?php echo htmlspecialchars($fName . ' ' . $lName); ?>!',
-                text: 'College of Computer Studies Student Dashboard',
-                icon: 'success',
-                timer: 1500,
-                timerProgressBar: true,
-                showConfirmButton: false,
-                toast: true,
-                position: 'top-end',
-                customClass: {
-                    popup: 'bg-gradient-to-r from-navy-800 to-blue-600 text-white',
-                    title: 'text-white',
-                    content: 'text-blue-100'
-                },
-                background: 'rgb(0, 0, 128)',
-                color: '#ffffff'
-            });
-        });
+        const progressBar = document.getElementById('progressBar');
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 4; // Increment progress faster
+            progressBar.style.width = progress + '%';
+            if (progress >= 100) {
+                clearInterval(interval);
+                const welcome = document.getElementById('welcomeMessage');
+                if (welcome) {
+                    welcome.remove();
+                }
+            }
+        }, 100); // Reduce interval time for faster updates
     </script>
+
+
+    </script>
+    <?php endif; ?>
 
     <!-- Main Content -->
     <main class="container mx-auto px-4 py-8 max-w-7xl">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Student Info -->
-            <div class="bg-white rounded-2xl shadow-md p-6 hover:shadow-xl transition-shadow duration-300">
-                <div class="flex flex-col items-center">
-                    <div class="relative">
-                        <img src="<?php echo htmlspecialchars($profile_image); ?>" alt="" class="w-36 h-36 rounded-full object-cover ring-4 ring-navy-800/10">
-                        <div class="absolute bottom-0 right-0 bg-green-500 w-4 h-4 rounded-full border-2 border-white"></div>
-                    </div>
-                    <h3 class="text-xl font-bold mt-4 mb-6 text-gray-800"><?php echo htmlspecialchars("$fName $lName"); ?></h3>
-                    <div class="space-y-4 w-full text-sm divide-y divide-gray-100">
-                        <div class="flex items-center py-2">
-                            <i class="fas fa-id-badge w-5 text-navy-800"></i>
-                            <span class="text-gray-600 ml-3"><?php echo htmlspecialchars($IDNO); ?></span>
+            <!-- Profile -->
+            <div class="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300">
+                <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-2xl flex items-center">
+                    <i class="fas fa-user text-white mr-2"></i>
+                    <h3 class="text-lg font-semibold text-white">Profile</h3>
+                </div>
+                <div class="p-6 rounded-b-2xl">
+                    <div class="flex flex-col items-center">
+                        <div class="relative">
+                            <img src="<?php echo htmlspecialchars($profile_image); ?>" alt="" class="w-36 h-36 rounded-full object-cover ring-4 ring-navy-800/10">
+                            <div class="absolute bottom-0 right-0 bg-green-500 w-4 h-4 rounded-full border-2 border-white"></div>
                         </div>
-                        <div class="flex items-center py-2">
-                            <i class="fas fa-graduation-cap w-5 text-navy-800"></i>
-                            <span class="text-gray-600 ml-3"><?php echo htmlspecialchars($Course); ?></span>
-                        </div>
-                        <div class="flex items-center py-2">
-                            <i class="fas fa-clock w-5 text-navy-800"></i>
-                            <span class="text-gray-600 ml-3"><?php echo htmlspecialchars($Yrlevel); ?> Year</span>
-                        </div>
-                        <div class="flex items-center py-2">
-                            <i class="fas fa-ticket-alt w-5 text-navy-800"></i>
-                            <span class="text-gray-600 ml-3">Remaining Sessions: <?php echo htmlspecialchars($session); ?></span>
-                        </div>
-                        <div class="flex items-center py-2">
-                            <i class="fas fa-star w-5 text-navy-800"></i>
-                            <span class="text-gray-600 ml-3">Points: <?php echo htmlspecialchars($points); ?>/3</span>
-                        </div>
-                        <div class="flex items-center py-2">
-                            <i class="fas fa-envelope w-5 text-navy-800"></i>
-                            <span class="text-gray-600 ml-3"><?php echo htmlspecialchars($email); ?></span>
-                        </div>
-                        <div class="flex items-center py-2">
-                            <i class="fas fa-home w-5 text-navy-800"></i>
-                            <span class="text-gray-600 ml-3"><?php echo htmlspecialchars($address); ?></span>
+                        <h3 class="text-xl font-bold mt-4 mb-6 text-gray-800"><?php echo htmlspecialchars("$fName $lName"); ?></h3>
+                        <div class="space-y-4 w-full text-sm divide-y divide-gray-100">
+                            <div class="flex items-center py-2">
+                                <i class="fas fa-id-badge w-5 text-navy-800"></i>
+                                <span class="text-gray-600 ml-3"><?php echo htmlspecialchars($IDNO); ?></span>
+                            </div>
+                            <div class="flex items-center py-2">
+                                <i class="fas fa-graduation-cap w-5 text-navy-800"></i>
+                                <span class="text-gray-600 ml-3"><?php echo htmlspecialchars($Course); ?></span>
+                            </div>
+                            <div class="flex items-center py-2">
+                                <i class="fas fa-clock w-5 text-navy-800"></i>
+                                <span class="text-gray-600 ml-3"><?php echo htmlspecialchars($Yrlevel); ?> Year</span>
+                            </div>
+                            <div class="flex items-center py-2">
+                                <i class="fas fa-ticket-alt w-5 text-navy-800"></i>
+                                <span class="text-gray-600 ml-3">Remaining Sessions: <?php echo htmlspecialchars($session); ?></span>
+                            </div>
+                            <div class="flex items-center py-2">
+                                <i class="fas fa-star w-5 text-navy-800"></i>
+                                <span class="text-gray-600 ml-3">Points: <?php echo htmlspecialchars($points); ?>/3</span>
+                            </div>
+                            <div class="flex items-center py-2">
+                                <i class="fas fa-envelope w-5 text-navy-800"></i>
+                                <span class="text-gray-600 ml-3"><?php echo htmlspecialchars($email); ?></span>
+                            </div>
+                            <div class="flex items-center py-2">
+                                <i class="fas fa-home w-5 text-navy-800"></i>
+                                <span class="text-gray-600 ml-3"><?php echo htmlspecialchars($address); ?></span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Announcements -->
-            <div class="bg-white rounded-2xl shadow-md p-6 hover:shadow-xl transition-shadow duration-300">
-                <h3 class="text-xl font-bold mb-6 text-gray-800 flex items-center">
-                    <i class="fas fa-bullhorn mr-2 text-navy-800"></i>
-                    Announcements
-                </h3>
-                <div class="max-h-[500px] overflow-y-auto pr-2">
+            <div class="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300">
+                <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-2xl flex items-center">
+                    <i class="fas fa-bullhorn text-white mr-2"></i>
+                    <h3 class="text-lg font-semibold text-white">Announcements</h3>
+                </div>
+                <div class="p-6 max-h-[500px] overflow-y-auto pr-2 rounded-b-2xl">
                     <?php if ($announcements_query->num_rows > 0): ?>
                         <?php while($announcement = $announcements_query->fetch_assoc()): ?>
                             <div class="mb-6 bg-gray-50 rounded-xl p-4 last:mb-0">
@@ -172,12 +199,12 @@ $conn->close();
             </div>
 
             <!-- Rules -->
-            <div class="bg-white rounded-2xl shadow-md p-6 hover:shadow-xl transition-shadow duration-300">
-                <h3 class="text-xl font-bold mb-6 text-gray-800 flex items-center">
-                    <i class="fas fa-gavel mr-2 text-navy-800"></i>
-                    Laboratory Rules
-                </h3>
-                <div class="max-h-[500px] overflow-y-auto pr-2 text-sm">
+            <div class="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300">
+                <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-2xl flex items-center">
+                    <i class="fas fa-gavel text-white mr-2"></i>
+                    <h3 class="text-lg font-semibold text-white">Laboratory Rules</h3>
+                </div>
+                <div class="p-6 max-h-[500px] overflow-y-auto pr-2 text-sm rounded-b-2xl">
                     <div class="space-y-4 text-gray-600">
                         <div class="bg-navy-800/5 p-4 rounded-lg">
                             <h4 class="font-bold text-navy-800 mb-2">University of Cebu</h4>

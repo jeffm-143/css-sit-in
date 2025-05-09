@@ -549,7 +549,6 @@ if (isset($_GET['get_computers'])) {
                 const grid = document.getElementById('computerGrid');
                 const roomHeading = document.getElementById('roomHeading');
                 
-                // Add transition class
                 grid.classList.add('opacity-0');
                 
                 fetch(`reservation-admin.php?get_computers=1${labRoom ? `&lab_room=${labRoom}` : ''}`)
@@ -572,12 +571,10 @@ if (isset($_GET['get_computers'])) {
                             grid.appendChild(div);
                         });
                         
-                        // Update heading and animate grid
-                        roomHeading.textContent = `Computer Status Management - Room ${labRoom}`;
+                        roomHeading.textContent = `Computer Status Management`;
                         grid.classList.remove('opacity-0');
                         grid.classList.add('grid-transition');
                         
-                        // Remove animation class after transition
                         setTimeout(() => {
                             grid.classList.remove('grid-transition');
                         }, 500);
@@ -586,7 +583,21 @@ if (isset($_GET['get_computers'])) {
 
             function toggleComputerStatus(element, pcId, currentStatus) {
                 const pcNumber = element.querySelector('p.font-medium').textContent;
-                const newStatus = currentStatus === 'available' ? 'in_use' : 'available';
+                // Update status toggle logic to match reservation.php
+                let newStatus;
+                switch(currentStatus) {
+                    case 'available':
+                        newStatus = 'in_use';
+                        break;
+                    case 'in_use':
+                        newStatus = 'maintenance';
+                        break;
+                    case 'maintenance':
+                        newStatus = 'available';
+                        break;
+                    default:
+                        newStatus = 'available';
+                }
                 
                 const formData = new FormData();
                 formData.append('ajax_update_computer', '1');
@@ -608,12 +619,11 @@ if (isset($_GET['get_computers'])) {
                         element.querySelector('p.text-sm').textContent = formatStatus(newStatus);
                         element.setAttribute('onclick', `toggleComputerStatus(this, ${pcId}, '${newStatus}')`);
                         
-                        // Show custom success message
                         Swal.fire({
                             toast: true,
                             position: 'top-end',
                             icon: 'success',
-                            title: `${pcNumber} updated to ${newStatus === 'in_use' ? 'in used' : 'available'}`,
+                            title: `${pcNumber} status updated to ${formatStatus(newStatus)}`,
                             showConfirmButton: false,
                             timer: 1500
                         });
@@ -634,28 +644,40 @@ if (isset($_GET['get_computers'])) {
 
             function getStatusClass(status) {
                 switch(status) {
-                    case 'available': return 'bg-green-50';
-                    case 'in_use': return 'bg-red-50';
-                    case 'maintenance': return 'bg-gray-50';
-                    default: return 'bg-gray-50';
+                    case 'available':
+                        return 'bg-green-50';
+                    case 'in_use':
+                        return 'bg-yellow-50';
+                    case 'maintenance':
+                        return 'bg-red-50';
+                    default:
+                        return 'bg-gray-50';
                 }
             }
 
             function getStatusIconClass(status) {
                 switch(status) {
-                    case 'available': return 'text-green-500';
-                    case 'in_use': return 'text-red-500';
-                    case 'maintenance': return 'text-gray-500';
-                    default: return 'text-gray-500';
+                    case 'available':
+                        return 'text-green-500';
+                    case 'in_use':
+                        return 'text-yellow-500';
+                    case 'maintenance':
+                        return 'text-red-500';
+                    default:
+                        return 'text-gray-500';
                 }
             }
 
             function getStatusTextClass(status) {
                 switch(status) {
-                    case 'available': return 'text-green-600';
-                    case 'in_use': return 'text-red-600';
-                    case 'maintenance': return 'text-gray-600';
-                    default: return 'text-gray-600';
+                    case 'available':
+                        return 'text-green-600';
+                    case 'in_use':
+                        return 'text-yellow-600';
+                    case 'maintenance':
+                        return 'text-red-600';
+                    default:
+                        return 'text-gray-600';
                 }
             }
 

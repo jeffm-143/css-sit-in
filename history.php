@@ -83,93 +83,118 @@ $result = $stmt->get_result();
     <title>Session History - CCS Sit-in Monitoring</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .hover-card { transition: all 0.2s ease; }
+        .hover-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+        
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
 
 <!-- Navigation -->
-<header class="bg-navy-800 shadow-lg">
+<header class="bg-gradient-to-r from-blue-800 to-indigo-800 shadow-lg">
     <div class="container mx-auto px-4">
         <nav class="flex items-center justify-between h-16">
             <h2 class="text-2xl font-bold text-white">History</h2>
             <div class="flex items-center space-x-8">
                 <ul class="flex space-x-6">
-                    <li><a href="#" class="text-white hover:text-yellow-400 transition">Notification</a></li>
-                    <li><a href="dashboard.php" class="text-white hover:text-yellow-400 transition">Home</a></li>
-                    <li><a href="edit_profile.php" class="text-white hover:text-yellow-400 transition">Edit Profile</a></li>
-                    <li><a href="history.php" class="text-white hover:text-yellow-400 transition">History</a></li>
-                    <li><a href="reservation.php" class="text-white hover:text-yellow-400 transition">Reservation</a></li>
+                    <li><a href="#" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-bell mr-1"></i>Notification</a></li>
+                    <li><a href="dashboard.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-home mr-1"></i>Home</a></li>
+                    <li><a href="edit_profile.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-user-edit mr-1"></i>Edit Profile</a></li>
+                    <li><a href="history.php" class="text-yellow-400 font-bold hover:text-yellow-400 transition-colors"><i class="fas fa-history mr-1"></i>History</a></li>
+                    <li><a href="reservation.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-calendar-alt mr-1"></i>Reservation</a></li>
                 </ul>
-                <a href="logout.php" class="bg-yellow-400 text-navy-800 px-4 py-2 rounded-lg font-bold hover:bg-navy-800 hover:text-yellow-400 transition duration-300">Log out</a>
+                <a href="logout.php" class="bg-yellow-400 text-indigo-900 px-6 py-2 rounded-lg font-bold hover:bg-yellow-500 transition duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                    <i class="fas fa-sign-out-alt mr-1"></i>Log out
+                </a>
             </div>
         </nav>
     </div>
 </header>
 
 <!-- Main Content -->
-<div class="container mx-auto p-6 max-w-7xl">
-    <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">Your Sit-in Session History</h2>
+<div class="container mx-auto p-6 max-w-7xl fade-in">
+    <div class="bg-white rounded-2xl shadow-lg p-8 hover-card">
+        <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">Your Sit-in Session History</h2>
 
-    <?php if ($result->num_rows > 0): ?>
-        <div class="overflow-hidden shadow-xl rounded-lg border border-gray-200">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th scope="col" class="px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                        <th scope="col" class="px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th scope="col" class="px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Purpose</th>
-                        <th scope="col" class="px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Lab Room</th>
-                        <th scope="col" class="px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Start Time</th>
-                        <th scope="col" class="px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">End Time</th>
-                        <th scope="col" class="px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th scope="col" class="px-6 py-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    <?php while ($row = $result->fetch_assoc()): ?>
-                        <tr class="hover:bg-gray-50 transition-colors duration-200">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($row['ID_NUMBER']); ?></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($row['Name']); ?></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo nl2br(htmlspecialchars(str_replace("\r\n", "\n", $row['purpose']))); ?></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo nl2br(htmlspecialchars(str_replace("\r\n", "\n", $row['lab_room']))); ?></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo nl2br(htmlspecialchars(str_replace("\r\n", "\n", $row['start_time']))); ?></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo nl2br(htmlspecialchars(str_replace("\r\n", "\n", $row['end_time']))); ?></td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                    <?php echo $row['status'] === 'active' ? 'bg-green-100 text-green-800' : 'bg-green-100 text-gray-800'; ?>">
-                                    <?php echo nl2br(htmlspecialchars(str_replace("\r\n", "\n", $row['status']))); ?>
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                <a href="feedback.php?session_id=<?php echo $row['id']; ?>" 
-                                   data-session-id="<?php echo $row['id']; ?>"
-                                   class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
-                                    Feedback
-                                </a>
-                            </td>
+        <?php if ($result->num_rows > 0): ?>
+            <div class="overflow-hidden rounded-xl border border-gray-200">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                        <tr class="bg-gradient-to-r from-blue-50 to-indigo-50">
+                            <th scope="col" class="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">ID</th>
+                            <th scope="col" class="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
+                            <th scope="col" class="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Purpose</th>
+                            <th scope="col" class="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Lab Room</th>
+                            <th scope="col" class="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Start Time</th>
+                            <th scope="col" class="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">End Time</th>
+                            <th scope="col" class="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                            <th scope="col" class="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
                         </tr>
-                    <?php endwhile; ?>
-                </tbody>
-            </table>
-        </div>
-    <?php else: ?>
-        <div class="text-center py-8">
-            <div class="text-gray-500 text-lg">No session history found.</div>
-        </div>
-    <?php endif; ?>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-100">
+                        <?php while ($row = $result->fetch_assoc()): ?>
+                            <tr class="hover:bg-blue-50/50 transition-colors duration-150">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo htmlspecialchars($row['ID_NUMBER']); ?></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><?php echo htmlspecialchars($row['Name']); ?></td>
+                                <td class="px-6 py-4 text-sm text-gray-700"><?php echo nl2br(htmlspecialchars($row['purpose'])); ?></td>
+                                <td class="px-6 py-4 text-sm text-gray-700"><?php echo nl2br(htmlspecialchars($row['lab_room'])); ?></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo date('M d, Y h:i A', strtotime($row['start_time'])); ?></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><?php echo $row['end_time'] ? date('M d, Y h:i A', strtotime($row['end_time'])) : '-'; ?></td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                        <?php echo $row['status'] === 'active' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'; ?>">
+                                        <?php echo ucfirst($row['status']); ?>
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <button data-session-id="<?php echo $row['id']; ?>" 
+                                            class="feedback-btn inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow">
+                                        <i class="fas fa-comment-alt mr-2"></i>Feedback
+                                    </button>
+                                </td>
+                            </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php else: ?>
+            <div class="text-center py-12 bg-gray-50 rounded-xl">
+                <i class="fas fa-history text-gray-400 text-5xl mb-4"></i>
+                <div class="text-gray-500 text-lg">No session history found.</div>
+            </div>
+        <?php endif; ?>
+    </div>
 </div>
 
-<!-- Feedback Modal -->
-<div id="feedbackModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center hidden">
-    <div class="bg-white rounded-lg shadow-lg w-1/3">
-        <div class="p-4 border-b">
-            <h3 class="text-lg font-bold">Submit Feedback</h3>
+<!-- Enhanced Feedback Modal -->
+<div id="feedbackModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex items-center justify-center backdrop-blur-sm transition-opacity duration-300">
+    <div class="bg-white rounded-2xl shadow-xl w-96 transform transition-all duration-300 scale-95 opacity-0">
+        <div class="p-6 border-b border-gray-100">
+            <h3 class="text-xl font-bold text-gray-900">Submit Feedback</h3>
+            <p class="mt-2 text-sm text-gray-500">Share your thoughts about this session</p>
         </div>
-        <div class="p-4">
-            <textarea id="feedbackText" class="w-full border rounded-lg p-2" rows="5" placeholder="Type your feedback here..."></textarea>
+        <div class="p-6">
+            <textarea id="feedbackText" 
+                      class="w-full border rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow duration-200" 
+                      rows="5" 
+                      placeholder="Type your feedback here..."></textarea>
         </div>
-        <div class="flex justify-end p-4 border-t">
-            <button id="cancelButton" class="bg-gray-500 text-white px-4 py-2 rounded-lg mr-2 hover:bg-gray-700">Cancel</button>
-            <button id="submitFeedbackButton" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Submit Feedback</button>
+        <div class="flex justify-end gap-4 px-6 py-4 bg-gray-50 rounded-b-2xl">
+            <button id="cancelButton" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+                Cancel
+            </button>
+            <button id="submitFeedbackButton" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow">
+                Submit Feedback
+            </button>
         </div>
     </div>
 </div>
@@ -187,62 +212,80 @@ $result = $stmt->get_result();
         }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const feedbackModal = document.getElementById('feedbackModal');
-        const feedbackButtons = document.querySelectorAll('a[href^="feedback.php"]');
-        const cancelButton = document.getElementById('cancelButton');
-        const submitFeedbackButton = document.getElementById('submitFeedbackButton');
-        const feedbackText = document.getElementById('feedbackText');
-        let sessionId = null;
+    // Enhanced modal animations
+    const feedbackModal = document.getElementById('feedbackModal');
+    const modalContent = feedbackModal.querySelector('div');
+    const feedbackButtons = document.querySelectorAll('.feedback-btn');
+    const cancelButton = document.getElementById('cancelButton');
+    const submitFeedbackButton = document.getElementById('submitFeedbackButton');
+    const feedbackText = document.getElementById('feedbackText');
+    let sessionId = null;
 
-        feedbackButtons.forEach(button => {
-            button.addEventListener('click', (e) => {
-                e.preventDefault();
-                sessionId = button.getAttribute('data-session-id');
-                feedbackModal.classList.remove('hidden');
-            });
-        });
+    const showModal = () => {
+        feedbackModal.classList.remove('hidden');
+        setTimeout(() => {
+            modalContent.classList.remove('scale-95', 'opacity-0');
+            modalContent.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    };
 
-        cancelButton.addEventListener('click', () => {
+    const hideModal = () => {
+        modalContent.classList.remove('scale-100', 'opacity-100');
+        modalContent.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => {
             feedbackModal.classList.add('hidden');
+            feedbackText.value = '';
+        }, 200);
+    };
+
+    feedbackButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            sessionId = button.getAttribute('data-session-id');
+            showModal();
+            feedbackText.focus();
         });
+    });
 
-        const submitFeedback = () => {
-            if (feedbackText.value.trim() === '') {
-                alert('Please enter your feedback.');
-                return;
-            }
+    cancelButton.addEventListener('click', hideModal);
+    feedbackModal.addEventListener('click', (e) => {
+        if (e.target === feedbackModal) hideModal();
+    });
 
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = 'history.php';
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !feedbackModal.classList.contains('hidden')) hideModal();
+    });
 
-            const sessionInput = document.createElement('input');
-            sessionInput.type = 'hidden';
-            sessionInput.name = 'session_id';
-            sessionInput.value = sessionId;
+    const submitFeedback = () => {
+        if (!feedbackText.value.trim()) {
+            feedbackText.classList.add('ring-2', 'ring-red-500');
+            setTimeout(() => feedbackText.classList.remove('ring-2', 'ring-red-500'), 2000);
+            return;
+        }
 
-            const feedbackInput = document.createElement('input');
-            feedbackInput.type = 'hidden';
-            feedbackInput.name = 'feedback';
-            feedbackInput.value = feedbackText.value;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.style.display = 'none';
+        
+        const sessionInput = document.createElement('input');
+        sessionInput.name = 'session_id';
+        sessionInput.value = sessionId;
 
-            form.appendChild(sessionInput);
-            form.appendChild(feedbackInput);
+        const feedbackInput = document.createElement('input');
+        feedbackInput.name = 'feedback';
+        feedbackInput.value = feedbackText.value;
 
-            document.body.appendChild(form);
-            form.submit();
-        };
+        form.appendChild(sessionInput);
+        form.appendChild(feedbackInput);
+        document.body.appendChild(form);
+        form.submit();
+    };
 
-        submitFeedbackButton.addEventListener('click', submitFeedback);
-
-        // Submit feedback on Enter key press
-        feedbackText.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                submitFeedback();
-            }
-        });
+    submitFeedbackButton.addEventListener('click', submitFeedback);
+    feedbackText.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+            e.preventDefault();
+            submitFeedback();
+        }
     });
 </script>
 
