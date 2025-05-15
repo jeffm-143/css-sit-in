@@ -23,7 +23,9 @@ if ($conn->connect_error) {
 }
 
 $user = $_SESSION['username'];
-$stmt = $conn->prepare("SELECT ID_NUMBER, LASTNAME, FIRSTNAME, MIDDLENAME, COURSE, YEAR, EMAIL, ADDRESS, IMAGE, SESSION, POINTS FROM users WHERE USERNAME = ?");
+$stmt = $conn->prepare("SELECT u.ID_NUMBER, u.LASTNAME, u.FIRSTNAME, u.MIDDLENAME, u.COURSE, u.YEAR, u.EMAIL, u.ADDRESS, u.IMAGE, u.SESSION,
+    COALESCE((SELECT SUM(points_earned) FROM points WHERE student_id = u.ID), 0) as total_points 
+    FROM users u WHERE u.USERNAME = ?");
 $stmt->bind_param("s", $user);
 $stmt->execute();
 $stmt->bind_result($IDNO, $lName, $fName, $MdName, $Course, $Yrlevel, $email, $address, $profile_image, $session, $points);
@@ -146,7 +148,7 @@ $conn->close();
                             </div>
                             <div class="flex items-center py-2">
                                 <i class="fas fa-star w-5 text-navy-800"></i>
-                                <span class="text-gray-600 ml-3">Points: <?php echo htmlspecialchars($points); ?>/3</span>
+                                <span class="text-gray-600 ml-3">Points: <?php echo htmlspecialchars($points); ?> total</span>
                             </div>
                             <div class="flex items-center py-2">
                                 <i class="fas fa-envelope w-5 text-navy-800"></i>

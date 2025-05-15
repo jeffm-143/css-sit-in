@@ -24,7 +24,8 @@ $purposes = $conn->query($purposeQuery)->fetch_all(MYSQLI_ASSOC);
 $labs = $conn->query($labQuery)->fetch_all(MYSQLI_ASSOC);
 
 // Build the query based on filters
-$query = "SELECT s.*, u.FIRSTNAME, u.LASTNAME 
+$query = "SELECT s.*, u.FIRSTNAME, u.LASTNAME, 
+          CASE WHEN s.reservation_id IS NOT NULL THEN 'reservation' ELSE 'direct' END as type
           FROM sit_in_sessions s
           JOIN users u ON s.student_id = u.ID_NUMBER
           WHERE s.status = 'completed'";
@@ -538,10 +539,10 @@ if (isset($_GET['export'])) {
             <div class="max-h-[600px] overflow-y-auto"> <!-- Add this wrapper div -->
                 <div id="reportTable"> <!-- Wrap the table in a div with an ID for printing -->
                     <table class="w-full border-collapse border border-gray-300">
-                        <thead class="bg-gray-200 sticky top-0"> <!-- Add sticky header -->
-                            <tr>
+                        <thead class="bg-gray-200 sticky top-0"> <!-- Add sticky header -->                            <tr>
                                 <th class="border px-4 py-2">ID Number</th>
                                 <th class="border px-4 py-2">Name</th>
+                                <th class="border px-4 py-2">Type</th>
                                 <th class="border px-4 py-2">Purpose</th>
                                 <th class="border px-4 py-2">Laboratory</th>
                                 <th class="border px-4 py-2">Login</th>
@@ -550,10 +551,17 @@ if (isset($_GET['export'])) {
                             </tr>
                         </thead>
                         <tbody>
-                            <?php while ($row = $records->fetch_assoc()): ?>
-                            <tr class="text-center">
+                            <?php while ($row = $records->fetch_assoc()): ?>                            <tr class="text-center">
                                 <td class="border px-4 py-2"><?php echo htmlspecialchars($row['student_id']); ?></td>
                                 <td class="border px-4 py-2"><?php echo htmlspecialchars($row['FIRSTNAME'] . ' ' . $row['LASTNAME']); ?></td>
+                                <td class="border px-4 py-2">
+                                    <?php 
+                                        $typeClass = $row['type'] === 'reservation' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800';
+                                        echo '<span class="px-2 py-1 rounded ' . $typeClass . '">' . 
+                                             ucfirst(htmlspecialchars($row['type'])) . 
+                                             '</span>';
+                                    ?>
+                                </td>
                                 <td class="border px-4 py-2"><?php echo htmlspecialchars($row['purpose']); ?></td>
                                 <td class="border px-4 py-2"><?php echo htmlspecialchars($row['lab_room']); ?></td>
                                 <td class="border px-4 py-2"><?php echo date("h:i:sa", strtotime($row['start_time'])); ?></td>

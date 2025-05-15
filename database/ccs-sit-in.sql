@@ -544,18 +544,48 @@ CREATE TABLE `users` (
   `IMAGE` varchar(100) DEFAULT NULL,
   `CREATED_AT` timestamp NOT NULL DEFAULT current_timestamp(),
   `user_type` enum('student','admin') NOT NULL DEFAULT 'student',
-  `POINTS` int(11) DEFAULT 0
+  `POINTS` int(11) DEFAULT 0,
+  `current_points` int(11) DEFAULT 0,
+  `total_points_earned` int(11) DEFAULT 0,
+  `sessions_earned` int(11) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`ID`, `ID_NUMBER`, `LASTNAME`, `FIRSTNAME`, `MIDDLENAME`, `COURSE`, `YEAR`, `USERNAME`, `PASSWORD`, `EMAIL`, `ADDRESS`, `SESSION`, `IMAGE`, `CREATED_AT`, `user_type`, `POINTS`) VALUES
-(1, 26683320, 'Monreal', 'Jeff', 'Ranido', 'BSIT', 3, 'j123', '$2y$10$lAJIYBRLFRVoUVjDHIX58.1ijRyVeJtJBZ9gLENVIkr.v26ZMjIdi', 'j123@gmail.com', 'jeff@email.com', 23, NULL, '2025-05-08 14:35:17', 'student', 0),
-(2, 999999, 'CSS', 'Admin', NULL, NULL, NULL, 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin@uc.edu.ph', NULL, 30, NULL, '2025-05-08 14:36:00', 'admin', 0),
-(3, 11111111, 'Sagaral', 'Alexus', 'Ranido', 'BSIT', 3, 'alex123', '$2y$10$8TdYXm5.Rrz77MYeGGGZP.OjFnhtm6MfaQsdrYFhmXDWiPyQ9zqT.', 'axie@gmail.com', 'Gudalupe', 28, NULL, '2025-05-08 19:41:40', 'student', 0);
+INSERT INTO `users` (`ID`, `ID_NUMBER`, `LASTNAME`, `FIRSTNAME`, `MIDDLENAME`, `COURSE`, `YEAR`, `USERNAME`, `PASSWORD`, `EMAIL`, `ADDRESS`, `SESSION`, `IMAGE`, `CREATED_AT`, `user_type`, `POINTS`, `current_points`, `total_points_earned`, `sessions_earned`) VALUES
+(1, 26683320, 'Monreal', 'Jeff', 'Ranido', 'BSIT', 3, 'j123', '$2y$10$lAJIYBRLFRVoUVjDHIX58.1ijRyVeJtJBZ9gLENVIkr.v26ZMjIdi', 'j123@gmail.com', 'jeff@email.com', 23, NULL, '2025-05-08 14:35:17', 'student', 0, 0, 0, 0),
+(2, 999999, 'CSS', 'Admin', NULL, NULL, NULL, 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin@uc.edu.ph', NULL, 30, NULL, '2025-05-08 14:36:00', 'admin', 0, 0, 0, 0),
+(3, 11111111, 'Sagaral', 'Alexus', 'Ranido', 'BSIT', 3, 'alex123', '$2y$10$8TdYXm5.Rrz77MYeGGGZP.OjFnhtm6MfaQsdrYFhmXDWiPyQ9zqT.', 'axie@gmail.com', 'Gudalupe', 28, NULL, '2025-05-08 19:41:40', 'student', 0, 0, 0, 0);
 
+--
+-- Table structure for table `points`
+--
+
+CREATE TABLE `points` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `student_id` int(11) NOT NULL,
+  `points_earned` int(11) NOT NULL,
+  `points_reason` text NOT NULL,
+  `awarded_by` varchar(50) NOT NULL,
+  `awarded_date` timestamp NOT NULL DEFAULT current_timestamp(),
+  `converted_to_session` tinyint(1) DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `student_id` (`student_id`),
+  CONSTRAINT `points_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `users` (`ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `lab_schedules` (
+  `schedule_id` int(11) NOT NULL AUTO_INCREMENT,
+  `lab_room` varchar(10) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text,
+  `schedule_image` varchar(255) NOT NULL,
+  `uploaded_by` varchar(100) NOT NULL,
+  `upload_date` timestamp NOT NULL DEFAULT current_timestamp,
+  PRIMARY KEY (`schedule_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 --
 -- Indexes for dumped tables
 --

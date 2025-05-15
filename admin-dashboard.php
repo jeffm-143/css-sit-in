@@ -21,7 +21,8 @@ $statistics = $conn->query("
     SELECT 
         (SELECT COUNT(*) FROM users WHERE user_type = 'student') as total_students,
         (SELECT COUNT(*) FROM sit_in_sessions WHERE status = 'active') as current_sitin,
-        (SELECT COUNT(*) FROM sit_in_sessions) as total_sitin
+        (SELECT COUNT(*) FROM sit_in_sessions) as total_sitin,
+        (SELECT COUNT(*) FROM resources) as total_resources
 ")->fetch_assoc();
 
 // Add this query near the top with other statistics queries
@@ -140,10 +141,10 @@ $conn->close();
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body class="bg-gray-100">
-    <!-- Alert Container - Add this at the top of body -->
-    <div id="alert-container" class="fixed top-4 right-4 z-50"></div>
+
 
     <!-- Move the alert JavaScript function to the top -->
     <script>
@@ -189,19 +190,52 @@ $conn->close();
     <!-- Navigation Bar -->
     <nav class="bg-blue-900 py-4 px-6 shadow-md">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <a href="admin-dashboard.php" class="text-white text-2xl font-bold">CCS Admin</a>
+            <a href="admin-dashboard.php" class="text-white text-2xl font-bold">CCS Admin</a>            <!-- Desktop Navigation -->
+            <div class="hidden md:flex items-center space-x-6">
+                <ul class="flex space-x-6 text-white font-medium">
+                    <li><a href="admin-dashboard.php" class="hover:text-yellow-400 transition">Home</a></li>
+                    <li><a href="search.php" class="hover:text-yellow-400 transition">Search</a></li>
+                    <li><a href="students.php" class="hover:text-yellow-400 transition">Students</a></li>
+                    <li><a href="sit-in.php" class="hover:text-yellow-400 transition">Sit-in</a></li>
+                    <li><a href="view-sit-in.php" class="hover:text-yellow-400 transition">View Sit-in</a></li>
+                    <li><a href="sit-in-reports.php" class="hover:text-yellow-400 transition">Sit-in Reports</a></li>
+                    <li><a href="feedback-reports.php" class="hover:text-yellow-400 transition">Feedback</a></li>
+                    <li><a href="reservation-admin.php" class="hover:text-yellow-400 transition">Reservation</a></li>
+                </ul>
 
-            <!-- Desktop Navigation -->
-            <ul class="hidden md:flex space-x-6 text-white font-medium">
-                <li><a href="admin-dashboard.php" class="hover:text-yellow-400 transition">Home</a></li>
-                <li><a href="search.php" class="hover:text-yellow-400 transition">Search</a></li>
-                <li><a href="students.php" class="hover:text-yellow-400 transition">Students</a></li>
-                <li><a href="sit-in.php" class="hover:text-yellow-400 transition">Sit-in</a></li>
-                <li><a href="view-sit-in.php" class="hover:text-yellow-400 transition">View Sit-in</a></li>
-                <li><a href="sit-in-reports.php" class="hover:text-yellow-400 transition">Sit-in Reports</a></li>
-                <li><a href="feedback-reports.php" class="hover:text-yellow-400 transition">Feedback</a></li>
-                <li><a href="reservation-admin.php" class="hover:text-yellow-400 transition">Reservation</a></li>
-            </ul>
+                <!-- Dropdown Menu -->
+                <div class="relative">
+                    <button id="dashboardOptionsBtn" type="button" class="flex items-center justify-center rounded-lg bg-yellow-400 px-3 py-2 text-sm font-medium text-blue-900 hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-300">
+                        <i class="fas fa-cog mr-2"></i>
+                        Options
+                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <div id="dashboardOptionsMenu" class="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden z-10">
+                        <div class="py-1">
+                            <a href="admin_resources.php" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
+                                <i class="fas fa-book-reader mr-2"></i> Manage Resources
+                            </a>
+                        </div>
+                        <div class="py-1">
+                            <a href="admin_points.php" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
+                                <i class="fas fa-chart-bar mr-2"></i> Usage Points
+                            </a>
+                        </div>
+                        <div class="py-1">
+                            <a href="admin_labsched.php" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
+                                <i class="fas fa-calendar-alt mr-2"></i> Set Lab Schedule
+                            </a>
+                        </div>
+                        <div class="py-1">
+                            <a href="admin_leaderboards.php" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
+                                <i class="fas fa-trophy mr-2"></i> Leaderboards
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Log Out Button -->
             <a href="logout.php" class="bg-yellow-400 text-blue-900 px-4 py-2 rounded-lg font-bold hover:bg-blue-700 hover:text-white transition">
@@ -217,7 +251,6 @@ $conn->close();
             <h1 class="text-3xl font-bold">Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></h1>
             <p class="mt-2 opacity-90">College of Computer Studies Admin Dashboard</p>
         </div>
-
         <!-- Dashboard Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <!-- Students Registered Card -->
@@ -366,6 +399,42 @@ $conn->close();
     </div>
 
     <!-- Add these JavaScript functions -->
+    <script>
+        // Dropdown toggle
+        document.getElementById('dashboardOptionsBtn').addEventListener('click', function(event) {
+            event.stopPropagation();
+            const dropdownMenu = document.getElementById('dashboardOptionsMenu');
+            dropdownMenu.style.display = dropdownMenu.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdownMenu = document.getElementById('dashboardOptionsMenu');
+            const dropdownButton = document.getElementById('dashboardOptionsBtn');
+            if (!dropdownButton.contains(event.target) && !dropdownMenu.contains(event.target)) {
+                dropdownMenu.style.display = 'none';
+            }
+        });
+
+        // Running time function
+        function updateTime() {
+            const now = new Date();
+            let hours = now.getHours();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // hour '0' should be '12'
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            
+            document.getElementById('running-time').textContent = 
+                `${hours}:${minutes}:${seconds} ${ampm}`;
+        }
+
+        // Update immediately, then every second
+        updateTime();
+        setInterval(updateTime, 1000);
+    </script>
+
     <script>
         function editAnnouncement(id, content) {
             document.getElementById('edit_announcement_id').value = id;

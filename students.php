@@ -97,43 +97,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: students.php');
         exit();
     }
-
-    // Add points handling in POST section
-    if (isset($_POST['add_point'])) {
-        $id = $_POST['id'];
-        
-        $conn->begin_transaction();
-        try {
-            // Get current points and session
-            $stmt = $conn->prepare("SELECT POINTS, SESSION FROM users WHERE ID = ?");
-            $stmt->bind_param("i", $id);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $user = $result->fetch_assoc();
-            
-            $new_points = $user['POINTS'] + 1;
-            $new_session = $user['SESSION'];
-            
-            // If points reach 3, add a session and reset points
-            if ($new_points >= 3) {
-                $new_points = 0;
-                $new_session++;
-            }
-            
-            // Update points and session
-            $update = $conn->prepare("UPDATE users SET POINTS = ?, SESSION = ? WHERE ID = ?");
-            $update->bind_param("iii", $new_points, $new_session, $id);
-            $update->execute();
-            
-            $conn->commit();
-            $_SESSION['alert'] = ['title' => 'Success', 'message' => 'Point added successfully!'];
-        } catch (Exception $e) {
-            $conn->rollback();
-            $_SESSION['alert'] = ['title' => 'Error', 'message' => 'Error adding point.'];
-        }
-        header('Location: students.php');
-        exit();
-    }
 }
 
 // Fetch students
@@ -166,24 +129,20 @@ $result = $conn->query($query);
             <div class="overflow-x-auto">
                 <table class="w-full border-collapse bg-white text-left text-sm">
                     <thead class="bg-gray-200">
-                        <tr class="text-center">
-                            <th class="p-3">ID Number</th>
+                        <tr class="text-center">                            <th class="p-3">ID Number</th>
                             <th class="p-3">Name</th>
                             <th class="p-3">Year Level</th>
                             <th class="p-3">Course</th>
-                            <th class="p-3">Points</th>
                             <th class="p-3">Remaining Session</th>
                             <th class="p-3">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="text-center">
                         <?php while ($row = $result->fetch_assoc()): ?>
-                            <tr class="border-t">
-                                <td class="p-3"><?= htmlspecialchars($row['ID_NUMBER']) ?></td>
+                            <tr class="border-t">                                <td class="p-3"><?= htmlspecialchars($row['ID_NUMBER']) ?></td>
                                 <td class="p-3"><?= htmlspecialchars($row['LASTNAME'] . ", " . $row['FIRSTNAME']) ?></td>
                                 <td class="p-3"><?= htmlspecialchars($row['YEAR']) ?></td>
                                 <td class="p-3"><?= htmlspecialchars($row['COURSE']) ?></td>
-                                <td class="p-3"><?= htmlspecialchars($row['POINTS'] ?? 0) ?>/3</td>
                                 <td class="p-3"><?= htmlspecialchars($row['SESSION']) ?></td>
                                 <td class="p-3 flex gap-2 justify-center items-center">
                                     <button onclick="editStudent(<?= htmlspecialchars(json_encode($row)) ?>)" 
@@ -198,13 +157,6 @@ $result = $conn->query($query);
                                             class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600">
                                         Reset Session
                                     </button>
-                                    <form method="POST" class="inline">
-                                        <input type="hidden" name="id" value="<?= $row['ID'] ?>">
-                                        <button type="submit" name="add_point"
-                                                class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">
-                                            Add Point
-                                        </button>
-                                    </form>
                                 </td>
                             </tr>
                         <?php endwhile; ?>
