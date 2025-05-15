@@ -202,39 +202,92 @@ $conn->close();
                     <li><a href="feedback-reports.php" class="hover:text-yellow-400 transition">Feedback</a></li>
                     <li><a href="reservation-admin.php" class="hover:text-yellow-400 transition">Reservation</a></li>
                 </ul>
-
-                <!-- Dropdown Menu -->
+>
+                <!-- Admin Tools Dropdown Menu -->
                 <div class="relative">
-                    <button id="dashboardOptionsBtn" type="button" class="flex items-center justify-center rounded-lg bg-yellow-400 px-3 py-2 text-sm font-medium text-blue-900 hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-300">
-                        <i class="fas fa-cog mr-2"></i>
-                        Options
-                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <!-- Primary Button with Gradient -->
+                    <button id="dashboardOptionsBtn" type="button" class="flex items-center justify-center rounded-md bg-gradient-to-r from-blue-600 to-blue-800 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:from-blue-700 hover:to-blue-900 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                        <i class="fas fa-tools mr-2 text-blue-200"></i>
+                        <span>Admin Tools</span>
+                        <svg class="w-4 h-4 ml-2 transition-transform duration-200" id="dropdownArrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
                     </button>
-                    <div id="dashboardOptionsMenu" class="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden z-10">
-                        <div class="py-1">
-                            <a href="admin_resources.php" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
-                                <i class="fas fa-book-reader mr-2"></i> Manage Resources
-                            </a>
-                        </div>
-                        <div class="py-1">
-                            <a href="admin_points.php" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
-                                <i class="fas fa-chart-bar mr-2"></i> Usage Points
-                            </a>
-                        </div>
-                        <div class="py-1">
-                            <a href="admin_labsched.php" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
-                                <i class="fas fa-calendar-alt mr-2"></i> Set Lab Schedule
-                            </a>
-                        </div>
-                        <div class="py-1">
-                            <a href="admin-leaderboards.php" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900">
-                                <i class="fas fa-trophy mr-2"></i> Leaderboards
-                            </a>
+                    
+                    <!-- Enhanced Dropdown Panel -->
+                    <div id="dashboardOptionsMenu" class="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 hidden z-10 transform origin-top-right transition-all duration-200 ease-out opacity-0 scale-95">
+                        <div class="py-1.5 divide-y divide-gray-100 dark:divide-gray-700">
+                            <!-- Menu Item 1 -->
+                            <div>
+                                <a href="admin-resources.php" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/30">
+                                    <i class="fas fa-book-reader mr-3 text-blue-600 dark:text-blue-400 w-5 text-center"></i>
+                                    <span>Manage Resources</span>
+                                </a>
+                            </div>
+                            
+                            <!-- Menu Item 2 -->
+                            <div>
+                                <a href="admin-points.php" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/30">
+                                    <i class="fas fa-chart-bar mr-3 text-blue-600 dark:text-blue-400 w-5 text-center"></i>
+                                    <span>Usage Analytics</span>
+                                </a>
+                            </div>
+                            
+                            <!-- Menu Item 3 -->
+                            <div>
+                                <a href="admin-labsched.php" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/30">
+                                    <i class="fas fa-calendar-alt mr-3 text-blue-600 dark:text-blue-400 w-5 text-center"></i>
+                                    <span>Lab Scheduling</span>
+                                </a>
+                            </div>
+                            
+                            <!-- Menu Item 4 -->
+                            <div>
+                                <a href="admin-leaderboards.php" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/30">
+                                    <i class="fas fa-trophy mr-3 text-blue-600 dark:text-blue-400 w-5 text-center"></i>
+                                    <span>Performance Rankings</span>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Add this script at the end of your file before </body> -->
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const dropdownBtn = document.getElementById('dashboardOptionsBtn');
+                        const dropdownMenu = document.getElementById('dashboardOptionsMenu');
+                        const dropdownArrow = document.getElementById('dropdownArrow');
+                        
+                        dropdownBtn.addEventListener('click', function() {
+                            const expanded = dropdownMenu.classList.contains('hidden');
+                            
+                            if (expanded) {
+                                // Show menu
+                                dropdownMenu.classList.remove('hidden', 'opacity-0', 'scale-95');
+                                dropdownMenu.classList.add('opacity-100', 'scale-100');
+                                dropdownArrow.classList.add('rotate-180');
+                            } else {
+                                // Hide menu
+                                dropdownMenu.classList.add('opacity-0', 'scale-95');
+                                dropdownArrow.classList.remove('rotate-180');
+                                
+                                // Wait for animation to complete before hiding
+                                setTimeout(() => {
+                                    dropdownMenu.classList.add('hidden');
+                                }, 200);
+                            }
+                        });
+                        
+                        // Close dropdown when clicking outside
+                        document.addEventListener('click', function(event) {
+                            if (!dropdownBtn.contains(event.target) && !dropdownMenu.contains(event.target)) {
+                                dropdownMenu.classList.add('hidden', 'opacity-0', 'scale-95');
+                                dropdownArrow.classList.remove('rotate-180');
+                            }
+                        });
+                    });
+                </script>
             </div>
 
             <!-- Log Out Button -->

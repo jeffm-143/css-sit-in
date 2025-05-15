@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 15, 2025 at 06:32 AM
+-- Generation Time: May 15, 2025 at 10:26 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -479,6 +479,13 @@ CREATE TABLE `lab_schedules` (
   `upload_date` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `lab_schedules`
+--
+
+INSERT INTO `lab_schedules` (`schedule_id`, `lab_room`, `title`, `description`, `schedule_image`, `uploaded_by`, `upload_date`) VALUES
+(1, 'LAB 524', '524', '524', '1747296446_OIP.jpg', 'admin', '2025-05-15 08:07:26');
+
 -- --------------------------------------------------------
 
 --
@@ -494,6 +501,14 @@ CREATE TABLE `points` (
   `awarded_date` timestamp NOT NULL DEFAULT current_timestamp(),
   `converted_to_session` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `points`
+--
+
+INSERT INTO `points` (`id`, `student_id`, `points_earned`, `points_reason`, `awarded_by`, `awarded_date`, `converted_to_session`) VALUES
+(1, 1, 1, 'None', 'admin', '2025-05-15 07:39:56', 1),
+(2, 1, 2, 'nana', 'admin', '2025-05-15 07:40:08', 1);
 
 -- --------------------------------------------------------
 
@@ -543,6 +558,13 @@ CREATE TABLE `resources` (
   `upload_date` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `resources`
+--
+
+INSERT INTO `resources` (`id`, `title`, `description`, `resource_type`, `file_path`, `link_url`, `year_level`, `course`, `uploaded_by`, `upload_date`) VALUES
+(2, 'IT', 'Knowledge', 'link', NULL, 'https://www.w3schools.com/java/default.asp', '1st Year', 'BSIT', 'admin', '2025-05-15 15:08:41');
+
 -- --------------------------------------------------------
 
 --
@@ -572,7 +594,8 @@ INSERT INTO `sit_in_sessions` (`id`, `student_id`, `lab_room`, `purpose`, `start
 (5, 26683320, 'MAC', 'ASP.Net', '2025-05-08 22:23:02', '2025-05-08 22:29:59', 'completed', '2025-05-08 20:23:02'),
 (6, 26683320, 'MAC', 'C', '2025-05-08 22:33:11', '2025-05-08 22:45:38', 'completed', '2025-05-08 20:33:11'),
 (7, 26683320, '524', 'C', '2025-05-08 22:55:28', '2025-05-08 23:10:44', 'completed', '2025-05-08 20:55:28'),
-(8, 26683320, '547', 'C', '2025-05-08 23:13:37', '2025-05-08 23:28:11', 'completed', '2025-05-08 21:13:37');
+(8, 26683320, '547', 'C', '2025-05-08 23:13:37', '2025-05-08 23:28:11', 'completed', '2025-05-08 21:13:37'),
+(0, 22683320, '530', 'PHP', '2025-05-15 09:39:29', '2025-05-15 09:39:31', 'completed', '2025-05-15 07:39:29');
 
 -- --------------------------------------------------------
 
@@ -607,7 +630,7 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`ID`, `ID_NUMBER`, `LASTNAME`, `FIRSTNAME`, `MIDDLENAME`, `COURSE`, `YEAR`, `USERNAME`, `PASSWORD`, `EMAIL`, `ADDRESS`, `SESSION`, `IMAGE`, `CREATED_AT`, `user_type`, `POINTS`, `current_points`, `total_points_earned`, `sessions_earned`) VALUES
-(1, 22683320, 'Monreal', 'Jeff ', 'Ranido', 'BSIT', 3, 'j123', '$2y$10$nBxx8z1OXvFdLpUmzK8bl...HWuPZAOn33Au8sYjkG9PM4FqXY5le', 'jeff@gmail.com', 'Cebu City', 30, NULL, '2025-05-15 03:33:53', 'student', 0, 0, 0, 0),
+(1, 22683320, 'Monreal', 'Jeff ', 'Ranido', 'BSIT', 3, 'j123', '$2y$10$nBxx8z1OXvFdLpUmzK8bl...HWuPZAOn33Au8sYjkG9PM4FqXY5le', 'jeff@gmail.com', 'Cebu City', 30, NULL, '2025-05-15 03:33:53', 'student', 0, 0, 3, 1),
 (2, 11111111, 'Sagaral', 'Alexus', '', 'BSIT', 3, 'alex123', '$2y$10$R8LUTMfnppkVlbtnX438sOjWyg0Qr2ijW1pwu6VFcHln..4CkBok.', 'alex@gmail.com', 'Cebu City', 30, NULL, '2025-05-15 03:34:37', 'student', 0, 0, 0, 0),
 (3, 222222222, 'Catubig', 'Mark', '', 'BSIT', 3, 'mark123', '$2y$10$HDVDfCzPpyNMCGaUfqf/ZOZwMyM9f5/qZyMRZv0ies978wDFdp98K', 'mark@gmail.com', 'Cebu City', 30, NULL, '2025-05-15 03:35:13', 'student', 0, 0, 0, 0),
 (4, 33333333, 'Palacio', 'Real Jhon', '', 'BSIT', 3, 'real123', '$2y$10$beFM5LFnkLBPBcjJPXEDRuWPyYVNule9/.Klt5xhZmIgW8dVf99j6', 'real@gmail.com', 'Cebu City', 30, NULL, '2025-05-15 03:35:55', 'student', 0, 0, 0, 0),
@@ -652,19 +675,19 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `lab_schedules`
 --
 ALTER TABLE `lab_schedules`
-  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `points`
 --
 ALTER TABLE `points`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `resources`
 --
 ALTER TABLE `resources`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `users`

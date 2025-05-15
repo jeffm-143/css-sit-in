@@ -54,7 +54,7 @@ if (isset($_POST['add_resource'])) {
         $_SESSION['error_message'] = "Error adding resource.";
     }
     
-    header("Location: ../admin_resources.php");
+    header("Location: ../admin-resources.php");
     exit();
 }
 
@@ -86,7 +86,7 @@ if (isset($_GET['delete'])) {
         $_SESSION['error_message'] = "Error deleting resource.";
     }
     
-    header("Location: ../admin_resources.php");
+    header("Location: ../admin-resources.php");
     exit();
 }
 ?>

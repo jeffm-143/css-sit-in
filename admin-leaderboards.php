@@ -10,643 +10,707 @@ if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'admin') {
 // Include the database connection
 include('db_connection.php');
 
-// Get top 5 students based on lab sessions
-$sessionsQuery = "SELECT u.ID, CONCAT(u.FIRSTNAME, ' ', u.LASTNAME) as name, u.EMAIL, u.YEAR, u.COURSE, u.IMAGE, 
-         COUNT(s.id) as session_count,
-         SUM(TIMESTAMPDIFF(MINUTE, s.start_time, s.end_time)) as total_minutes
-         FROM users u
-         LEFT JOIN sit_in_sessions s ON u.ID_NUMBER = s.student_id AND s.status = 'completed'
-         WHERE u.user_type = 'student'
-         GROUP BY u.ID
-         HAVING session_count > 0
-         ORDER BY session_count DESC, total_minutes DESC
-         LIMIT 5";
-
-$sessionsResult = $conn->query($sessionsQuery);
-$topSessionStudents = [];
-
-if ($sessionsResult && $sessionsResult->num_rows > 0) {
-    while ($row = $sessionsResult->fetch_assoc()) {
-        $topSessionStudents[] = $row;
-    }
-}
-
-// Get top 5 students based on points
-$pointsQuery = "SELECT u.ID, CONCAT(u.FIRSTNAME, ' ', u.LASTNAME) as name, u.EMAIL, u.YEAR, u.COURSE, u.IMAGE,
-         COALESCE(COUNT(p.id), 0) as session_count,
-         u.POINTS as total_points, u.total_points_earned, u.sessions_earned
-         FROM users u
-         LEFT JOIN points p ON u.ID = p.student_id
-         WHERE u.user_type = 'student' AND u.POINTS > 0
-         GROUP BY u.ID
-         ORDER BY u.POINTS DESC, u.total_points_earned DESC
-         LIMIT 5";
+// Get top students based on points earned
+$pointsQuery = "SELECT u.ID, CONCAT(u.FIRSTNAME, ' ', u.LASTNAME) as name, u.EMAIL, u.YEAR, u.COURSE, u.IMAGE, 
+                COALESCE(u.total_points_earned, 0) as total_points,
+                COALESCE(u.current_points, 0) as current_points,
+                COUNT(p.id) as activities_count
+                FROM users u
+                LEFT JOIN points p ON u.ID = p.student_id 
+                WHERE u.user_type = 'student'
+                GROUP BY u.ID
+                ORDER BY total_points DESC, activities_count DESC
+                LIMIT 10";
 
 $pointsResult = $conn->query($pointsQuery);
-$topPointsStudents = [];
+$topPointStudents = [];
 
 if ($pointsResult && $pointsResult->num_rows > 0) {
     while ($row = $pointsResult->fetch_assoc()) {
-        $topPointsStudents[] = $row;
+        $topPointStudents[] = $row;
     }
 }
 
-// Get total statistics
-$statsQuery = "SELECT 
-    COUNT(*) as total_sessions,
-    COUNT(DISTINCT student_id) as unique_students,
-    SUM(TIMESTAMPDIFF(MINUTE, start_time, end_time)) as total_minutes
-    FROM sit_in_sessions
-    WHERE status = 'completed'";
-    
-$statsResult = $conn->query($statsQuery);
-$stats = $statsResult->fetch_assoc();
-
 // Get total points awarded
-$pointsStatsQuery = "SELECT SUM(POINTS) as total_points_awarded FROM users WHERE user_type = 'student'";
-$pointsStatsResult = $conn->query($pointsStatsQuery);
-$pointsStats = $pointsStatsResult->fetch_assoc();
-$totalPointsAwarded = $pointsStats['total_points_awarded'] ?: 0;
+$totalPointsQuery = "SELECT COALESCE(SUM(points_earned), 0) as total_points FROM points";
+$totalPointsResult = $conn->query($totalPointsQuery);
+$totalPointsAwarded = 0;
+if ($totalPointsResult && $row = $totalPointsResult->fetch_assoc()) {
+    $totalPointsAwarded = $row['total_points'];
+}
 
-// Calculate total hours from minutes
-$totalHours = round(($stats['total_minutes'] ?? 0) / 60, 1);
+// Get total students with points
+$studentsCountQuery = "SELECT COUNT(DISTINCT student_id) as student_count FROM points";
+$studentsCountResult = $conn->query($studentsCountQuery);
+$totalStudentsWithPoints = 0;
+if ($studentsCountResult && $row = $studentsCountResult->fetch_assoc()) {
+    $totalStudentsWithPoints = $row['student_count'];
+}
+
+// Get recent point awards
+$recentPointsQuery = "SELECT p.*, CONCAT(u.FIRSTNAME, ' ', u.LASTNAME) as student_name 
+                     FROM points p
+                     JOIN users u ON p.student_id = u.ID
+                     ORDER BY p.awarded_date DESC
+                     LIMIT 8";
+$recentPointsResult = $conn->query($recentPointsQuery);
+$recentPoints = [];
+
+if ($recentPointsResult && $recentPointsResult->num_rows > 0) {
+    while ($row = $recentPointsResult->fetch_assoc()) {
+        $recentPoints[] = $row;
+    }
+}
+
+// Get point stats by year level
+$pointsByYearQuery = "SELECT u.YEAR, 
+                    SUM(COALESCE(u.total_points_earned, 0)) as total_points,
+                    COUNT(DISTINCT u.ID) as student_count
+                    FROM users u
+                    WHERE u.user_type = 'student' AND u.total_points_earned > 0
+                    GROUP BY u.YEAR
+                    ORDER BY u.YEAR";
+$pointsByYearResult = $conn->query($pointsByYearQuery);
+$pointsByYear = [];
+
+if ($pointsByYearResult && $pointsByYearResult->num_rows > 0) {
+    while ($row = $pointsByYearResult->fetch_assoc()) {
+        $pointsByYear[] = $row;
+    }
+}
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Lab Resources | Admin</title>
-    <link rel="icon" type="image/png" href="images/wbccs.png">
+    <title>Leaderboards | Admin Dashboard</title>
+    <link rel="icon" type="image/png" href="images/css.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.4s ease-out',
+                        'pulse-soft': 'pulseSoft 2s infinite',
+                        'bounce-soft': 'bounceSoft 2s infinite'
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        },
+                        pulseSoft: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0.8' }
+                        },
+                        bounceSoft: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-5px)' }
+                        }
+                    },
+                },
+            },
+        }
+    </script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            background-color: #f9fafb;
         }
-        .animate-fade-in {
-            animation: fadeIn 0.5s ease-in-out;
+        
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        
+        .trophy-gold {
+            color: #FFD700;
+            filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.5));
         }
-        .stats-card:hover {
+        
+        .trophy-silver {
+            color: #C0C0C0;
+            filter: drop-shadow(0 0 2px rgba(192, 192, 192, 0.5));
+        }
+        
+        .trophy-bronze {
+            color: #CD7F32;
+            filter: drop-shadow(0 0 2px rgba(205, 127, 50, 0.5));
+        }
+        
+        .leaderboard-card {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .leaderboard-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.1), 0 8px 10px -6px rgba(59, 130, 246, 0.1);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
-        .podium-1 { border-color: #FFD700; }
-        .podium-2 { border-color: #C0C0C0; }
-        .podium-3 { border-color: #CD7F32; }
-        .medal-1 { color: #FFD700; }
-        .medal-2 { color: #C0C0C0; }
-        .medal-3 { color: #CD7F32; }
+        
+        .leaderboard-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom right, rgba(59, 130, 246, 0.05), rgba(37, 99, 235, 0));
+            pointer-events: none;
+        }
+        
+        .btn-primary {
+            @apply bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white px-4 py-2.5 rounded-md transition duration-200 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, #3b82f6, #1e40af);
+            border-radius: 10px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, #2563eb, #1e3a8a);
+        }
+        
+        /* Badge animations */
+        .badge-pulse {
+            animation: pulse 2s infinite;
+        }
         
         @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-        .pulse-animation {
-            animation: pulse 2s infinite ease-in-out;
+            0% {
+                box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+            }
         }
         
-        .chart-container {
-            position: relative;
-            height: 250px;
+        /* Confetti effect for top position */
+        .confetti-effect {
+            position: absolute;
             width: 100%;
+            height: 100%;
+            overflow: hidden;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+        
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            opacity: 0.7;
+            animation: confetti-fall 3s linear infinite;
+        }
+        
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-100px) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100px) rotate(360deg);
+                opacity: 0;
+            }
         }
     </style>
 </head>
-<body class="bg-gray-50">
-    <!-- Navigation header with soft shadow and subtle gradient -->
-    <div class="bg-white shadow-sm border-b sticky top-0 z-10">
+<body class="min-h-screen">
+    <!-- Top Navigation Bar -->
+    <nav class="bg-white shadow-sm border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center py-4">
-                <a href="admin-dashboard.php" class="group flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors duration-200">
-                    <div class="p-1.5 rounded-full bg-blue-50 group-hover:bg-blue-100 transition-colors duration-200">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
-                    </div>
-                    <span class="font-medium">Back to Dashboard</span>
-                </a>
-                <div class="hidden md:flex items-center space-x-2">
-                    <div class="h-8 w-8 rounded-full bg-yellow-100 flex items-center justify-center">
-                        <i class="fas fa-trophy text-yellow-600 text-sm"></i>
-                    </div>
-                    <span class="font-medium text-gray-700">Student Leaderboards</span>
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="admin-dashboard.php" class="flex items-center">
+                        <img class="h-10 w-auto mr-2" src="images/css.png" alt="Logo">
+                        <span class="font-semibold text-lg text-gray-900">Admin Portal</span>
+                    </a>
                 </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Dashboard Header with modern styling -->
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 animate-fade-in">
-            <div>
-                <div class="inline-flex items-center bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-4 py-1 rounded-full text-sm mb-3">
-                    <i class="fas fa-star mr-2"></i>
-                    Performance Metrics
-                </div>
-                <h1 class="text-2xl md:text-3xl font-bold text-gray-800 flex items-center">
-                    Student Leaderboards
-                </h1>
-                <p class="text-gray-600 mt-2 max-w-2xl">
-                    Recognizing our most dedicated students based on lab attendance and points earned.
-                </p>
-            </div>
-            
-            <div class="mt-6 md:mt-0 flex items-center space-x-3">
-                <div class="relative inline-block text-left">
-                    <button id="exportBtn" type="button" class="inline-flex items-center px-4 py-2.5 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
-                        <i class="fas fa-download mr-2 text-blue-500"></i>
-                        Export Data
-                    </button>
-                    <div id="exportMenu" class="origin-top-right absolute right-0 mt-2 w-56 rounded-xl shadow-xl bg-white ring-1 ring-black ring-opacity-5 hidden z-10 divide-y divide-gray-100">
-                        <div class="py-3 px-4">
-                            <p class="text-sm font-semibold text-gray-900">Export Options</p>
-                            <p class="text-xs text-gray-500 mt-1">Download leaderboard data</p>
-                        </div>
-                        <div class="py-1">
-                            <a href="#" class="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-blue-50">
-                                <i class="fas fa-file-csv text-green-500 mr-3 text-lg"></i>
-                                Export as CSV
-                            </a>
-                            <a href="#" class="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-blue-50">
-                                <i class="fas fa-file-pdf text-red-500 mr-3 text-lg"></i>
-                                Export as PDF
-                            </a>
-                            <a href="#" class="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-blue-50">
-                                <i class="fas fa-file-excel text-emerald-500 mr-3 text-lg"></i>
-                                Export as Excel
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                
-                <button id="refreshBtn" class="inline-flex items-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
-                    <i class="fas fa-sync-alt mr-2"></i>
-                    Refresh Data
-                </button>
-            </div>
-        </div>
-        
-        <!-- Stats Cards with elegant hover effects -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-            <!-- Total Sessions Card -->
-            <div class="stats-card bg-white overflow-hidden shadow-lg rounded-xl transition-all duration-300 border border-gray-100">
-                <div class="px-4 py-5 sm:p-6">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 bg-blue-100 rounded-lg p-3">
-                            <i class="fas fa-laptop-code text-blue-600 text-xl"></i>
-                        </div>
-                        <div class="ml-5 w-0 flex-1">
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">Total Sit-in Sessions</dt>
-                                <dd>
-                                    <div class="text-2xl font-bold text-gray-900">
-                                        <?php echo number_format($stats['total_sessions']); ?>
-                                    </div>
-                                </dd>
-                            </dl>
-                        </div>
-                    </div>
-                    <div class="mt-4 border-t border-gray-100 pt-4">
-                        <div class="text-xs text-gray-500">
-                            <span class="flex items-center">
-                                <i class="fas fa-chart-line text-blue-500 mr-1"></i>
-                                Total completed lab sessions
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Total Points Card -->
-            <div class="stats-card bg-white overflow-hidden shadow-lg rounded-xl transition-all duration-300 border border-gray-100">
-                <div class="px-4 py-5 sm:p-6">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 bg-purple-100 rounded-lg p-3">
-                            <i class="fas fa-star text-purple-600 text-xl"></i>
-                        </div>
-                        <div class="ml-5 w-0 flex-1">
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">Total Points Awarded</dt>
-                                <dd>
-                                    <div class="text-2xl font-bold text-gray-900">
-                                        <?php echo number_format($totalPointsAwarded); ?>
-                                    </div>
-                                </dd>
-                            </dl>
-                        </div>
-                    </div>
-                    <div class="mt-4 border-t border-gray-100 pt-4">
-                        <div class="text-xs text-gray-500">
-                            <span class="flex items-center">
-                                <i class="fas fa-star-half-alt text-purple-500 mr-1"></i>
-                                Cumulative points across all students
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Unique Students Card -->
-            <div class="stats-card bg-white overflow-hidden shadow-lg rounded-xl transition-all duration-300 border border-gray-100">
-                <div class="px-4 py-5 sm:p-6">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 bg-green-100 rounded-lg p-3">
-                            <i class="fas fa-users text-green-600 text-xl"></i>
-                        </div>
-                        <div class="ml-5 w-0 flex-1">
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">Active Students</dt>
-                                <dd>
-                                    <div class="text-2xl font-bold text-gray-900">
-                                        <?php echo number_format($stats['unique_students']); ?>
-                                    </div>
-                                </dd>
-                            </dl>
-                        </div>
-                    </div>
-                    <div class="mt-4 border-t border-gray-100 pt-4">
-                        <div class="text-xs text-gray-500">
-                            <span class="flex items-center">
-                                <i class="fas fa-user-check text-green-500 mr-1"></i>
-                                Unique students using the lab
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Total Hours Card -->
-            <div class="stats-card bg-white overflow-hidden shadow-lg rounded-xl transition-all duration-300 border border-gray-100">
-                <div class="px-4 py-5 sm:p-6">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 bg-indigo-100 rounded-lg p-3">
-                            <i class="fas fa-clock text-indigo-600 text-xl"></i>
-                        </div>
-                        <div class="ml-5 w-0 flex-1">
-                            <dl>
-                                <dt class="text-sm font-medium text-gray-500 truncate">Total Lab Hours</dt>
-                                <dd>
-                                    <div class="text-2xl font-bold text-gray-900">
-                                        <?php echo number_format($totalHours); ?> hours
-                                    </div>
-                                </dd>
-                            </dl>
-                        </div>
-                    </div>
-                    <div class="mt-4 border-t border-gray-100 pt-4">
-                        <div class="text-xs text-gray-500">
-                            <span class="flex items-center">
-                                <i class="fas fa-calendar-check text-indigo-500 mr-1"></i>
-                                Cumulative time spent in lab
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Main Content -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            <!-- Lab Sessions Leaderboard -->
-            <div>
-                <div class="bg-white shadow-lg overflow-hidden rounded-xl border border-gray-200 animate-fade-in">
-                    <div class="px-6 py-5 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 sm:px-6">
-                        <div class="flex justify-between items-center">
-                            <h3 class="text-lg leading-6 font-medium text-white flex items-center">
-                                <i class="fas fa-laptop-code mr-2"></i>
-                                Most Lab Sessions
-                            </h3>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white text-blue-600">
-                                <i class="fas fa-medal mr-1"></i> Attendance
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <?php if (empty($topSessionStudents)): ?>
-                        <div class="px-4 py-16 sm:px-6 text-center">
-                            <div class="flex flex-col items-center">
-                                <div class="mx-auto flex items-center justify-center h-24 w-24 rounded-full bg-blue-100">
-                                    <i class="fas fa-user-graduate text-blue-400 text-3xl"></i>
-                                </div>
-                                <h3 class="mt-5 text-xl font-medium text-gray-900">No data available yet</h3>
-                                <p class="mt-3 text-sm text-gray-500 max-w-md mx-auto">
-                                    No lab session data has been recorded yet.
-                                </p>
+                <div class="flex items-center space-x-4">
+                    <a href="admin-dashboard.php" class="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition duration-150">
+                        <i class="fas fa-arrow-left mr-1"></i> Back to Dashboard
+                    </a>
+                    <div class="relative">
+                        <button type="button" class="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <span class="sr-only">Open user menu</span>
+                            <div class="h-8 w-8 rounded-full bg-gradient-to-r from-blue-600 to-blue-800 flex items-center justify-center text-white">
+                                <i class="fas fa-user-shield"></i>
                             </div>
-                        </div>
-                    <?php else: ?>
-                        <ul class="divide-y divide-gray-200">
-                            <?php foreach ($topSessionStudents as $index => $student): ?>
-                                <?php 
-                                    // Define medal colors for top 3
-                                    $medalClass = '';
-                                    $medalIcon = '';
-                                    $podiumClass = '';
-                                    $bgColor = 'bg-white';
-                                    $badgeColor = 'bg-blue-100 text-blue-800';
+                            <span class="ml-2 text-gray-700 font-medium"><?php echo htmlspecialchars($_SESSION['username']); ?></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Page Header -->
+        <div class="mb-8 border-b border-gray-200 pb-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                <div class="flex-1 min-w-0">
+                    <h1 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl">
+                        Student Points Leaderboard
+                    </h1>
+                    <p class="mt-2 max-w-3xl text-sm text-gray-500">
+                        Monitor student engagement and recognize top performers based on points earned.
+                    </p>
+                </div>
+                <div class="mt-4 md:mt-0">
+                    <a href="admin-points.php" class="btn-primary flex items-center">
+                        <i class="fas fa-award mr-2"></i>
+                        <span>Manage Points</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- Total Points Awarded -->
+            <div class="bg-white rounded-lg shadow-sm p-6 relative overflow-hidden card-shadow">
+                <div class="absolute top-0 right-0 -mt-4 -mr-12 h-24 w-24 rounded-full bg-blue-100 opacity-20"></div>
+                <div class="absolute bottom-0 right-0 -mb-8 -mr-8 h-40 w-40 rounded-full bg-blue-50 opacity-30"></div>
+                
+                <div class="flex items-center z-10 relative">
+                    <div class="p-3 rounded-full bg-blue-50 mr-4">
+                        <i class="fas fa-star text-blue-600 fa-lg"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Total Points Awarded</p>
+                        <h3 class="text-2xl font-bold text-gray-900 animate-fade-in">
+                            <?php echo number_format($totalPointsAwarded); ?>
+                        </h3>
+                    </div>
+                </div>
+                <div class="mt-4 z-10 relative">
+                    <div class="text-sm text-gray-500 flex items-center">
+                        <i class="fas fa-chart-line mr-1 text-blue-600"></i>
+                        <span>Across the entire program</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Students With Points -->
+            <div class="bg-white rounded-lg shadow-sm p-6 relative overflow-hidden card-shadow">
+                <div class="absolute top-0 right-0 -mt-4 -mr-12 h-24 w-24 rounded-full bg-indigo-100 opacity-20"></div>
+                <div class="absolute bottom-0 right-0 -mb-8 -mr-8 h-40 w-40 rounded-full bg-indigo-50 opacity-30"></div>
+                
+                <div class="flex items-center z-10 relative">
+                    <div class="p-3 rounded-full bg-indigo-50 mr-4">
+                        <i class="fas fa-users text-indigo-600 fa-lg"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Students Earning Points</p>
+                        <h3 class="text-2xl font-bold text-gray-900 animate-fade-in">
+                            <?php echo number_format($totalStudentsWithPoints); ?>
+                        </h3>
+                    </div>
+                </div>
+                <div class="mt-4 z-10 relative">
+                    <div class="text-sm text-gray-500 flex items-center">
+                        <i class="fas fa-user-check mr-1 text-indigo-600"></i>
+                        <span>Active participants</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Average Points Per Student -->
+            <div class="bg-white rounded-lg shadow-sm p-6 relative overflow-hidden card-shadow">
+                <div class="absolute top-0 right-0 -mt-4 -mr-12 h-24 w-24 rounded-full bg-blue-100 opacity-20"></div>
+                <div class="absolute bottom-0 right-0 -mb-8 -mr-8 h-40 w-40 rounded-full bg-blue-50 opacity-30"></div>
+                
+                <div class="flex items-center z-10 relative">
+                    <div class="p-3 rounded-full bg-blue-50 mr-4">
+                        <i class="fas fa-chart-pie text-blue-600 fa-lg"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Average Points Per Student</p>
+                        <h3 class="text-2xl font-bold text-gray-900 animate-fade-in">
+                            <?php echo $totalStudentsWithPoints > 0 ? number_format($totalPointsAwarded / $totalStudentsWithPoints, 1) : '0.0'; ?>
+                        </h3>
+                    </div>
+                </div>
+                <div class="mt-4 z-10 relative">
+                    <div class="text-sm text-gray-500 flex items-center">
+                        <i class="fas fa-calculator mr-1 text-blue-600"></i>
+                        <span>Distribution average</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main content grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Top Students List -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-sm overflow-hidden card-shadow">
+                    <div class="px-6 py-5 border-b border-gray-200">
+                        <h2 class="text-lg font-medium text-gray-900 flex items-center">
+                            <i class="fas fa-trophy text-yellow-500 mr-2"></i>
+                            Top Students by Points
+                        </h2>
+                    </div>
+                    <div class="overflow-hidden">
+                        <?php if (count($topPointStudents) > 0): ?>
+                            <!-- Animated leaderboard podium for top 3 -->
+                            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-6">
+                                <div class="flex justify-center items-end space-x-6 pb-4 relative">
+                                    <?php 
+                                    // Sort top 3 students
+                                    $podiumStudents = array_slice($topPointStudents, 0, 3);
+                                    usort($podiumStudents, function($a, $b) {
+                                        return $b['total_points'] - $a['total_points'];
+                                    });
                                     
-                                    if ($index === 0) {
-                                        $medalClass = 'medal-1';
-                                        $medalIcon = '<i class="fas fa-medal text-yellow-500 mr-2 text-lg"></i>';
-                                        $podiumClass = 'podium-1';
-                                        $bgColor = 'bg-gradient-to-r from-blue-50 to-white';
-                                        $badgeColor = 'bg-blue-100 text-blue-800';
-                                    } elseif ($index === 1) {
-                                        $medalClass = 'medal-2';
-                                        $medalIcon = '<i class="fas fa-medal text-gray-400 mr-2 text-lg"></i>';
-                                        $podiumClass = 'podium-2';
-                                        $bgColor = 'bg-white';
-                                    } elseif ($index === 2) {
-                                        $medalClass = 'medal-3';
-                                        $medalIcon = '<i class="fas fa-medal text-yellow-700 mr-2 text-lg"></i>';
-                                        $podiumClass = 'podium-3';
-                                        $bgColor = 'bg-white';
+                                    // Helper function for ordinals
+                                    function getOrdinalSuffix($number) {
+                                        $suffixes = ['th', 'st', 'nd', 'rd', 'th', 'th', 'th', 'th', 'th', 'th'];
+                                        return ($number % 100 >= 11 && $number % 100 <= 13) ? 'th' : $suffixes[$number % 10];
                                     }
                                     
-                                    // Calculate hours from minutes
-                                    $hours = round($student['total_minutes'] / 60, 1);
-                                ?>
-                                <li class="px-6 py-4 <?php echo $bgColor; ?> hover:bg-gray-50 transition-colors duration-150">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <div class="flex-shrink-0 mr-4">
-                                                <div class="relative">
-                                                    <img class="h-14 w-14 rounded-full object-cover border-2 shadow-sm <?php echo $podiumClass; ?>" 
-                                                         src="../<?php echo !empty($student['profileImg']) ? $student['profileImg'] : 'images/person.jpg'; ?>" 
-                                                         alt="<?php echo htmlspecialchars($student['name']); ?>">
-                                                    <span class="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-white border-2 <?php echo $podiumClass; ?> flex items-center justify-center text-xs font-bold <?php echo $medalClass; ?> shadow-sm">
-                                                        <?php echo $index + 1; ?>
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <h4 class="text-md font-semibold text-gray-900 flex items-center">
-                                                    <?php echo $medalIcon; ?>
-                                                    <?php echo htmlspecialchars($student['name']); ?>
-                                                    <?php if ($index === 0): ?>
-                                                        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                                            <i class="fas fa-crown mr-1"></i> Top Attendee
-                                                        </span>
-                                                    <?php endif; ?>
-                                                </h4>
-                                                <p class="text-xs text-gray-500">
-                                                    <?php echo htmlspecialchars($student['course'] . ' - ' . $student['level']); ?>
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div class="flex flex-col items-end space-y-1">
-                                            <!-- Lab sessions -->
-                                            <div class="px-3 py-1 rounded-full <?php echo $badgeColor; ?> text-sm font-medium flex items-center">
-                                                <i class="fas fa-check-circle mr-1"></i>
-                                                <?php echo number_format($student['session_count']); ?> sessions
-                                            </div>
-                                            
-                                            <!-- Hours in lab -->
-                                            <div class="text-xs text-gray-500 flex items-center">
-                                                <i class="far fa-clock mr-1"></i>
-                                                <?php echo number_format($hours); ?> hours total
-                                            </div>
-                                        </div>
-                                    </div>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    <?php endif; ?>
-                </div>
-                
-                <!-- Sessions Chart -->
-                <div class="mt-6 bg-white shadow-lg overflow-hidden rounded-xl border border-gray-200 p-6">
-                    <h4 class="text-md font-medium text-gray-900 mb-4">Lab Sessions by Top Students</h4>
-                    <div class="chart-container">
-                        <canvas id="sessionsChart"></canvas>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Points Leaderboard -->
-            <div>
-                <div class="bg-white shadow-lg overflow-hidden rounded-xl border border-gray-200 animate-fade-in">
-                    <div class="px-6 py-5 border-b border-gray-200 bg-gradient-to-r from-purple-600 to-purple-700 sm:px-6">
-                        <div class="flex justify-between items-center">
-                            <h3 class="text-lg leading-6 font-medium text-white flex items-center">
-                                <i class="fas fa-star mr-2"></i>
-                                Most Points Earned
-                            </h3>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white text-purple-600">
-                                <i class="fas fa-trophy mr-1"></i> Achievement
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <?php if (empty($topPointsStudents)): ?>
-                        <div class="px-4 py-16 sm:px-6 text-center">
-                            <div class="flex flex-col items-center">
-                                <div class="mx-auto flex items-center justify-center h-24 w-24 rounded-full bg-purple-100">
-                                    <i class="fas fa-star text-purple-400 text-3xl"></i>
-                                </div>
-                                <h3 class="mt-5 text-xl font-medium text-gray-900">No points awarded yet</h3>
-                                <p class="mt-3 text-sm text-gray-500 max-w-md mx-auto">
-                                    No students have earned points yet.
-                                </p>
-                            </div>
-                        </div>
-                    <?php else: ?>
-                        <ul class="divide-y divide-gray-200">
-                            <?php foreach ($topPointsStudents as $index => $student): ?>
-                                <?php 
-                                    // Define medal colors for top 3
-                                    $medalClass = '';
-                                    $medalIcon = '';
-                                    $podiumClass = '';
-                                    $bgColor = 'bg-white';
-                                    $badgeColor = 'bg-purple-100 text-purple-800';
+                                    // Display podium in order: 2nd, 1st, 3rd
+                                    $positions = [1 => 0, 0 => 1, 2 => 2]; // Mapping position to display order
+                                    $heights = [120, 150, 100]; // Heights for each podium position
                                     
-                                    if ($index === 0) {
-                                        $medalClass = 'medal-1';
-                                        $medalIcon = '<i class="fas fa-medal text-yellow-500 mr-2 text-lg"></i>';
-                                        $podiumClass = 'podium-1';
-                                        $bgColor = 'bg-gradient-to-r from-purple-50 to-white';
-                                        $badgeColor = 'bg-purple-100 text-purple-800';
-                                    } elseif ($index === 1) {
-                                        $medalClass = 'medal-2';
-                                        $medalIcon = '<i class="fas fa-medal text-gray-400 mr-2 text-lg"></i>';
-                                        $podiumClass = 'podium-2';
-                                        $bgColor = 'bg-white';
-                                    } elseif ($index === 2) {
-                                        $medalClass = 'medal-3';
-                                        $medalIcon = '<i class="fas fa-medal text-yellow-700 mr-2 text-lg"></i>';
-                                        $podiumClass = 'podium-3';
-                                        $bgColor = 'bg-white';
-                                    }
-                                ?>
-                                <li class="px-6 py-4 <?php echo $bgColor; ?> hover:bg-gray-50 transition-colors duration-150">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center">
-                                            <div class="flex-shrink-0 mr-4">
-                                                <div class="relative">
-                                                    <img class="h-14 w-14 rounded-full object-cover border-2 shadow-sm <?php echo $podiumClass; ?>" 
-                                                         src="../<?php echo !empty($student['profileImg']) ? $student['profileImg'] : 'images/person.jpg'; ?>" 
-                                                         alt="<?php echo htmlspecialchars($student['name']); ?>">
-                                                    <span class="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-white border-2 <?php echo $podiumClass; ?> flex items-center justify-center text-xs font-bold <?php echo $medalClass; ?> shadow-sm">
-                                                        <?php echo $index + 1; ?>
-                                                    </span>
+                                    foreach ($positions as $displayOrder => $podiumPosition):
+                                        if (isset($podiumStudents[$podiumPosition])):
+                                            $student = $podiumStudents[$podiumPosition];
+                                            $rank = $podiumPosition + 1;
+                                            $rankClass = "";
+                                            $trophy = "";
+                                            
+                                            switch ($rank) {
+                                                case 1:
+                                                    $rankClass = "bg-gradient-to-r from-yellow-400 to-yellow-300";
+                                                    $trophy = "<i class='fas fa-trophy text-3xl trophy-gold animate-bounce-soft'></i>";
+                                                    break;
+                                                case 2:
+                                                    $rankClass = "bg-gradient-to-r from-gray-300 to-gray-200";
+                                                    $trophy = "<i class='fas fa-trophy text-2xl trophy-silver'></i>";
+                                                    break;
+                                                case 3:
+                                                    $rankClass = "bg-gradient-to-r from-yellow-700 to-yellow-600";
+                                                    $trophy = "<i class='fas fa-trophy text-xl trophy-bronze'></i>";
+                                                    break;
+                                            }
+                                    ?>
+                                        <div class="flex flex-col items-center">
+                                            <?php if ($rank === 1): ?>
+                                            <div class="relative mb-2">
+                                                <div class="confetti-effect">
+                                                    <!-- Confetti elements added by JS -->
                                                 </div>
                                             </div>
-                                            <div>
-                                                <h4 class="text-md font-semibold text-gray-900 flex items-center">
-                                                    <?php echo $medalIcon; ?>
-                                                    <?php echo htmlspecialchars($student['name']); ?>
-                                                    <?php if ($index === 0): ?>
-                                                        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                                                            <i class="fas fa-crown mr-1"></i> Top Achiever
-                                                        </span>
+                                            <?php endif; ?>
+                                            
+                                            <div class="flex flex-col items-center mb-2">
+                                                <div class="w-16 h-16 rounded-full bg-white p-1 shadow-md">
+                                                    <?php if (!empty($student['IMAGE']) && file_exists($student['IMAGE'])): ?>
+                                                        <img src="<?php echo htmlspecialchars($student['IMAGE']); ?>" alt="<?php echo htmlspecialchars($student['name']); ?>" class="w-full h-full object-cover rounded-full">
+                                                    <?php else: ?>
+                                                        <div class="w-full h-full rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium text-xl">
+                                                            <?php echo strtoupper(substr($student['name'], 0, 1)); ?>
+                                                        </div>
                                                     <?php endif; ?>
-                                                </h4>
-                                                <p class="text-xs text-gray-500">
-                                                    <?php echo htmlspecialchars($student['course'] . ' - ' . $student['level']); ?>
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div class="flex flex-col items-end space-y-1">
-                                            <!-- Earned points -->
-                                            <div class="px-3 py-1 rounded-full <?php echo $badgeColor; ?> text-sm font-medium flex items-center">
-                                                <i class="fas fa-award mr-1"></i>
-                                                <?php echo number_format($student['total_points']); ?> points
+                                                </div>
+                                                <div class="text-center mt-2">
+                                                    <p class="font-medium text-gray-900 text-sm"><?php echo htmlspecialchars($student['name']); ?></p>
+                                                    <div class="flex items-center justify-center mt-1">
+                                                        <?php echo $trophy; ?>
+                                                        <span class="font-bold text-blue-600 ml-1"><?php echo number_format($student['total_points']); ?> pts</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                             
-                                            <!-- Equivalent sessions -->
-                                            <div class="text-xs text-gray-500 flex items-center">
-                                                <i class="fas fa-exchange-alt mr-1"></i>
-                                                <?php echo floor($student['total_points'] / 3); ?> extra sessions
+                                            <div class="relative flex items-center justify-center <?php echo $rankClass; ?> text-white font-bold rounded-t-md px-8" style="height: <?php echo $heights[$displayOrder]; ?>px; width: 80px;">
+                                                <span class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white text-gray-800 text-xs font-medium px-2 py-1 rounded-full shadow-sm">
+                                                    <?php echo $rank . getOrdinalSuffix($rank); ?>
+                                                </span>
+                                                <span class="text-lg sm:text-2xl"><?php echo $rank === 1 ? '👑' : ($rank === 2 ? '🥈' : '🥉'); ?></span>
                                             </div>
                                         </div>
+                                    <?php 
+                                        endif;
+                                    endforeach; 
+                                    ?>
+                                </div>
+                                <div class="h-4 bg-gray-800 rounded-t-md shadow-inner"></div>
+                            </div>
+                            
+                            <!-- Complete leaderboard table -->
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
+                                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Year & Course</th>
+                                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Activities</th>
+                                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Points</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <?php foreach($topPointStudents as $index => $student): ?>
+                                            <tr class="hover:bg-gray-50 transition-colors <?php echo ($index < 3) ? 'bg-blue-50 bg-opacity-30' : ''; ?>">
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <div class="flex items-center justify-center w-8 h-8 rounded-full 
+                                                        <?php if($index === 0): ?>
+                                                            bg-yellow-100 text-yellow-600
+                                                        <?php elseif($index === 1): ?>
+                                                            bg-gray-100 text-gray-600
+                                                        <?php elseif($index === 2): ?>
+                                                            bg-yellow-700 bg-opacity-20 text-yellow-700
+                                                        <?php else: ?>
+                                                            bg-blue-50 text-blue-600
+                                                        <?php endif; ?>
+                                                    ">
+                                                        <?php if($index === 0): ?>
+                                                            <i class="fas fa-trophy trophy-gold"></i>
+                                                        <?php elseif($index === 1): ?>
+                                                            <i class="fas fa-trophy trophy-silver"></i>
+                                                        <?php elseif($index === 2): ?>
+                                                            <i class="fas fa-trophy trophy-bronze"></i>
+                                                        <?php else: ?>
+                                                            <span class="font-medium"><?php echo $index + 1; ?></span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <div class="flex items-center">
+                                                        <div class="flex-shrink-0 h-10 w-10">
+                                                            <?php if (!empty($student['IMAGE']) && file_exists($student['IMAGE'])): ?>
+                                                                <img class="h-10 w-10 rounded-full object-cover" src="<?php echo htmlspecialchars($student['IMAGE']); ?>" alt="">
+                                                            <?php else: ?>
+                                                                <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium">
+                                                                    <?php echo strtoupper(substr($student['name'], 0, 1)); ?>
+                                                                </div>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                        <div class="ml-4">
+                                                            <div class="text-sm font-medium text-gray-900"><?php echo htmlspecialchars($student['name']); ?></div>
+                                                            <div class="text-sm text-gray-500"><?php echo htmlspecialchars($student['EMAIL']); ?></div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                                    <span class="px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-full">
+                                                        <?php echo htmlspecialchars($student['YEAR'] . ' - ' . $student['COURSE']); ?>
+                                                    </span>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                                    <span class="text-gray-900"><?php echo number_format($student['activities_count']); ?></span>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                                    <div class="flex flex-col items-center">
+                                                        <span class="text-lg font-bold text-blue-600"><?php echo number_format($student['total_points']); ?></span>
+                                                        <span class="text-xs text-gray-500 mt-1">(<?php echo number_format($student['current_points']); ?> current)</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                        
+                                        <?php if (count($topPointStudents) === 0): ?>
+                                            <tr>
+                                                <td colspan="5" class="px-6 py-10 text-center">
+                                                    <div class="mx-auto w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-3">
+                                                        <i class="fas fa-award text-blue-500 text-2xl"></i>
+                                                    </div>
+                                                    <p class="text-gray-500 font-medium">No students have earned points yet</p>
+                                                    <p class="text-sm text-gray-400 mt-1">Points activity will appear here once awarded</p>
+                                                </td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php else: ?>
+                            <div class="py-8 px-6 text-center">
+                                <div class="mx-auto w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-3">
+                                    <i class="fas fa-trophy text-blue-500 text-2xl"></i>
+                                </div>
+                                <h3 class="text-lg font-medium text-gray-900 mb-1">No Leaderboard Data Available</h3>
+                                <p class="text-gray-500">Students will appear here once they've earned points.</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar: Stats and Recent Activity -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Points by Year Level Chart -->
+                <div class="bg-white rounded-lg shadow-sm overflow-hidden card-shadow">
+                    <div class="px-6 py-5 border-b border-gray-200">
+                        <h2 class="text-lg font-medium text-gray-900">Points by Year Level</h2>
+                    </div>
+                    <div class="p-6">
+                        <?php if (count($pointsByYear) > 0): ?>
+                            <canvas id="yearLevelChart" height="220"></canvas>
+                        <?php else: ?>
+                            <div class="py-6 text-center">
+                                <div class="mx-auto w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-3">
+                                    <i class="fas fa-chart-bar text-blue-500 text-lg"></i>
+                                </div>
+                                <p class="text-gray-500 text-sm">No data available yet</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Recent Points Activity -->
+                <div class="bg-white rounded-lg shadow-sm overflow-hidden card-shadow">
+                    <div class="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
+                        <h2 class="text-lg font-medium text-gray-900">Recent Activity</h2>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            <i class="fas fa-clock mr-1"></i> Last Awards
+                        </span>
+                    </div>
+                    <div class="divide-y divide-gray-200 max-h-96 overflow-y-auto custom-scrollbar">
+                        <?php if (count($recentPoints) > 0): ?>
+                            <?php foreach ($recentPoints as $activity): ?>
+                                <div class="px-6 py-4 flex items-start animate-fade-in">
+                                    <div class="mr-4 bg-blue-50 rounded-full p-2 mt-1">
+                                        <i class="fas fa-star text-blue-500"></i>
                                     </div>
-                                </li>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium text-gray-900">
+                                            <?php echo htmlspecialchars($activity['student_name']); ?> 
+                                            <span class="font-normal text-gray-500">earned</span>
+                                            <span class="font-semibold text-blue-600"><?php echo $activity['points_earned']; ?> points</span>
+                                        </p>
+                                        <p class="text-sm text-gray-500 mt-1"><?php echo htmlspecialchars($activity['points_reason']); ?></p>
+                                        <p class="text-xs text-gray-400 mt-1.5">
+                                            <span><?php echo date('M j, g:i A', strtotime($activity['awarded_date'])); ?></span>
+                                            <span class="mx-1">•</span>
+                                            <span>by <?php echo htmlspecialchars($activity['awarded_by']); ?></span>
+                                        </p>
+                                    </div>
+                                </div>
                             <?php endforeach; ?>
-                        </ul>
+                        <?php else: ?>
+                            <div class="px-6 py-10 text-center">
+                                <div class="mx-auto w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-3">
+                                    <i class="fas fa-history text-blue-500 text-lg"></i>
+                                </div>
+                                <p class="text-gray-500">No recent activity</p>
+                                <p class="text-sm text-gray-400 mt-1">Point awards will appear here</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                    <?php if (count($recentPoints) > 0): ?>
+                    <div class="px-6 py-3 bg-gray-50 text-center">
+                        <a href="admin-points.php" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
+                            View All Activity <i class="fas fa-arrow-right ml-1"></i>
+                        </a>
+                    </div>
                     <?php endif; ?>
                 </div>
-                
-                <!-- Points Chart -->
-                <div class="mt-6 bg-white shadow-lg overflow-hidden rounded-xl border border-gray-200 p-6">
-                    <h4 class="text-md font-medium text-gray-900 mb-4">Points Earned by Top Students</h4>
-                    <div class="chart-container">
-                        <canvas id="pointsChart"></canvas>
-                    </div>
-                </div>
             </div>
         </div>
-        
-        <!-- How Points and Rankings Work -->
-        <div class="bg-white shadow-lg overflow-hidden rounded-xl border border-gray-200 animate-fade-in mb-8">
-            <div class="px-6 py-5 border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 sm:px-6">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-lg leading-6 font-medium text-white flex items-center">
-                        <i class="fas fa-info-circle mr-2"></i>
-                        How Points & Lab Sessions Work
-                    </h3>
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white text-indigo-600">
-                        <i class="fas fa-lightbulb mr-1"></i> Info
-                    </span>
-                </div>
-            </div>
-            
-            <div class="px-6 py-5">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div class="flex flex-col">
-                        <div class="flex items-center mb-3">
-                            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                <i class="fas fa-laptop-code text-blue-600"></i>
-                            </div>
-                            <h4 class="ml-3 text-lg font-medium text-gray-900">Lab Sessions</h4>
-                        </div>
-                        <p class="text-sm text-gray-600">
-                            The Lab Sessions leaderboard recognizes students who consistently attend and use the computer laboratory. Regular attendance helps build discipline and provides continuous practice opportunities.
-                        </p>
-                    </div>
-                    
-                    <div class="flex flex-col">
-                        <div class="flex items-center mb-3">
-                            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
-                                <i class="fas fa-star text-purple-600"></i>
-                            </div>
-                            <h4 class="ml-3 text-lg font-medium text-gray-900">Points System</h4>
-                        </div>
-                        <p class="text-sm text-gray-600">
-                            The Points leaderboard showcases students who earn recognition for exceptional work, helping others, and demonstrating outstanding behavior in the lab. Points can be converted to extra lab sessions (3 points = 1 extra session).
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
+    </main>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Toggle export menu
-            const exportBtn = document.getElementById('exportBtn');
-            const exportMenu = document.getElementById('exportMenu');
-            
-            if (exportBtn && exportMenu) {
-                exportBtn.addEventListener('click', function() {
-                    exportMenu.classList.toggle('hidden');
-                });
+            // Generate confetti elements for top position
+            const confettiEffect = document.querySelector('.confetti-effect');
+            if (confettiEffect) {
+                const colors = ['#3b82f6', '#60a5fa', '#93c5fd', '#dbeafe', '#2563eb', '#1d4ed8'];
                 
-                // Close export menu when clicking outside
-                document.addEventListener('click', function(event) {
-                    if (!exportBtn.contains(event.target) && !exportMenu.contains(event.target)) {
-                        exportMenu.classList.add('hidden');
-                    }
-                });
-            }
-            
-            // Refresh button animation
-            const refreshBtn = document.getElementById('refreshBtn');
-            
-            if (refreshBtn) {
-                refreshBtn.addEventListener('click', function() {
-                    const icon = this.querySelector('i');
-                    icon.classList.add('animate-spin');
+                for (let i = 0; i < 30; i++) {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
                     
-                    // Simulate refresh
-                    setTimeout(function() {
-                        icon.classList.remove('animate-spin');
-                        location.reload();
-                    }, 1000);
-                });
+                    const size = Math.random() * 8 + 4;
+                    const color = colors[Math.floor(Math.random() * colors.length)];
+                    
+                    confetti.style.width = `${size}px`;
+                    confetti.style.height = `${size}px`;
+                    confetti.style.backgroundColor = color;
+                    confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                    confetti.style.left = `${Math.random() * 100}%`;
+                    confetti.style.animationDuration = `${Math.random() * 3 + 2}s`;
+                    confetti.style.animationDelay = `${Math.random() * 5}s`;
+                    
+                    confettiEffect.appendChild(confetti);
+                }
             }
             
-            <?php if (!empty($topSessionStudents)): ?>
-            // Sessions chart
-            const sessionsCtx = document.getElementById('sessionsChart').getContext('2d');
-            const sessionsChart = new Chart(sessionsCtx, {
+            // Initialize chart if we have data
+            <?php if (count($pointsByYear) > 0): ?>
+            const ctx = document.getElementById('yearLevelChart').getContext('2d');
+            const yearLevelChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: [
-                        <?php foreach ($topSessionStudents as $student): ?>
-                            '<?php echo htmlspecialchars($student['name']); ?>',
+                        <?php foreach ($pointsByYear as $yearData): ?>
+                            '<?php echo htmlspecialchars("Year " . $yearData['YEAR']); ?>',
                         <?php endforeach; ?>
                     ],
                     datasets: [{
-                        label: 'Lab Sessions',
+                        label: 'Total Points',
                         data: [
-                            <?php foreach ($topSessionStudents as $student): ?>
-                                <?php echo $student['session_count']; ?>,
+                            <?php foreach ($pointsByYear as $yearData): ?>
+                                <?php echo $yearData['total_points']; ?>,
                             <?php endforeach; ?>
                         ],
-                        backgroundColor: 'rgba(54, 162, 235, 0.8)',
-                        borderColor: 'rgb(54, 162, 235)',
-                        borderWidth: 2,
-                        borderRadius: 6,
-                        hoverOffset: 4
+                        backgroundColor: [
+                            'rgba(37, 99, 235, 0.7)',
+                            'rgba(59, 130, 246, 0.7)',
+                            'rgba(96, 165, 250, 0.7)',
+                            'rgba(147, 197, 253, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(37, 99, 235, 1)',
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(96, 165, 250, 1)',
+                            'rgba(147, 197, 253, 1)'
+                        ],
+                        borderWidth: 1,
+                        borderRadius: 4
                     }]
                 },
                 options: {
@@ -654,151 +718,58 @@ $totalHours = round(($stats['total_minutes'] ?? 0) / 60, 1);
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            display: true,
-                            position: 'top',
-                            labels: {
-                                font: {
-                                    size: 12
-                                },
-                                color: '#4B5563',
-                                usePointStyle: true,
-                                padding: 15
-                            }
+                            display: false,
                         },
                         tooltip: {
-                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                            titleColor: '#111827',
-                            bodyColor: '#4B5563',
-                            titleFont: {
-                                size: 14,
-                                weight: 'bold'
-                            },
+                            backgroundColor: '#1e40af',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
                             bodyFont: {
-                                size: 13
+                                family: 'Inter'
+                            },
+                            titleFont: {
+                                family: 'Inter'
                             },
                             padding: 12,
-                            boxWidth: 10,
-                            usePointStyle: true,
-                            borderColor: 'rgba(220, 220, 220, 1)',
-                            borderWidth: 1,
-                            displayColors: true
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.parsed.y} points earned`;
+                                },
+                                footer: function(tooltipItems) {
+                                    <?php $yearStats = []; ?>
+                                    <?php foreach ($pointsByYear as $index => $yearData): ?>
+                                        <?php $yearStats[] = "{ year: {$index}, students: {$yearData['student_count']} }"; ?>
+                                    <?php endforeach; ?>
+                                    
+                                    const yearData = [<?php echo implode(',', $yearStats); ?>];
+                                    const yearStats = yearData[tooltipItems[0].dataIndex];
+                                    return `${yearStats.students} student${yearStats.students !== 1 ? 's' : ''}`;
+                                }
+                            }
                         }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            ticks: {
-                                precision: 0,
-                                font: {
-                                    size: 12
-                                },
-                                color: '#6B7280'
-                            },
                             grid: {
-                                display: true,
-                                color: 'rgba(243, 244, 246, 1)'
+                                drawBorder: false,
+                                color: 'rgba(200, 200, 200, 0.15)',
+                            },
+                            ticks: {
+                                font: {
+                                    family: 'Inter'
+                                }
                             }
                         },
                         x: {
-                            ticks: {
-                                font: {
-                                    size: 12
-                                },
-                                color: '#6B7280'
-                            },
                             grid: {
                                 display: false
-                            }
-                        }
-                    }
-                }
-            });
-            <?php endif; ?>
-            
-            <?php if (!empty($topPointsStudents)): ?>
-            // Points chart
-            const pointsCtx = document.getElementById('pointsChart').getContext('2d');
-            const pointsChart = new Chart(pointsCtx, {
-                type: 'bar',
-                data: {
-                    labels: [
-                        <?php foreach ($topPointsStudents as $student): ?>
-                            '<?php echo htmlspecialchars($student['name']); ?>',
-                        <?php endforeach; ?>
-                    ],
-                    datasets: [{
-                        label: 'Points Earned',
-                        data: [
-                            <?php foreach ($topPointsStudents as $student): ?>
-                                <?php echo $student['total_points']; ?>,
-                            <?php endforeach; ?>
-                        ],
-                        backgroundColor: 'rgba(153, 102, 255, 0.8)',
-                        borderColor: 'rgb(153, 102, 255)',
-                        borderWidth: 2,
-                        borderRadius: 6,
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top',
-                            labels: {
-                                font: {
-                                    size: 12
-                                },
-                                color: '#4B5563',
-                                usePointStyle: true,
-                                padding: 15
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                            titleColor: '#111827',
-                            bodyColor: '#4B5563',
-                            titleFont: {
-                                size: 14,
-                                weight: 'bold'
                             },
-                            bodyFont: {
-                                size: 13
-                            },
-                            padding: 12,
-                            boxWidth: 10,
-                            usePointStyle: true,
-                            borderColor: 'rgba(220, 220, 220, 1)',
-                            borderWidth: 1,
-                            displayColors: true
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                precision: 0,
-                                font: {
-                                    size: 12
-                                },
-                                color: '#6B7280'
-                            },
-                            grid: {
-                                display: true,
-                                color: 'rgba(243, 244, 246, 1)'
-                            }
-                        },
-                        x: {
                             ticks: {
                                 font: {
-                                    size: 12
-                                },
-                                color: '#6B7280'
-                            },
-                            grid: {
-                                display: false
+                                    family: 'Inter'
+                                }
                             }
                         }
                     }
