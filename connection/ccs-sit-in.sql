@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 08, 2025 at 07:20 AM
+-- Generation Time: May 15, 2025 at 06:32 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -39,7 +39,8 @@ CREATE TABLE `announcements` (
 --
 
 INSERT INTO `announcements` (`id`, `admin_username`, `content`, `date_posted`) VALUES
-(1, 'admin', 'Sample', '2025-05-08 12:55:35');
+(1, 'admin', 'Sample', '2025-05-08 12:55:35'),
+(0, 'admin', 'hello', '2025-05-15 12:18:42');
 
 -- --------------------------------------------------------
 
@@ -465,6 +466,38 @@ INSERT INTO `lab_rooms` (`id`, `room_number`, `total_computers`, `status`, `crea
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `lab_schedules`
+--
+
+CREATE TABLE `lab_schedules` (
+  `schedule_id` int(11) NOT NULL,
+  `lab_room` varchar(10) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `schedule_image` varchar(255) NOT NULL,
+  `uploaded_by` varchar(100) NOT NULL,
+  `upload_date` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `points`
+--
+
+CREATE TABLE `points` (
+  `id` int(11) NOT NULL,
+  `student_id` int(11) NOT NULL,
+  `points_earned` int(11) NOT NULL,
+  `points_reason` text NOT NULL,
+  `awarded_by` varchar(50) NOT NULL,
+  `awarded_date` timestamp NOT NULL DEFAULT current_timestamp(),
+  `converted_to_session` tinyint(1) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `reservations`
 --
 
@@ -490,6 +523,25 @@ INSERT INTO `reservations` (`id`, `student_id`, `lab_room`, `pc_number`, `purpos
 (2, 26683320, '524', 'PC01', 'C', '2025-05-15', '10:30:00', 'approved', '2025-05-08 06:24:15', '2025-05-08 04:23:42', '2025-05-08 04:24:15'),
 (3, 26683320, '524', 'PC02', 'C', '2025-05-13', '10:30:00', 'approved', '2025-05-08 06:31:27', '2025-05-08 04:30:42', '2025-05-08 04:31:27'),
 (4, 26683320, '524', 'PC02', 'C', '2025-05-15', '10:30:00', 'approved', '2025-05-08 06:53:41', '2025-05-08 04:52:38', '2025-05-08 04:53:41');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `resources`
+--
+
+CREATE TABLE `resources` (
+  `id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text NOT NULL,
+  `resource_type` enum('document','video','link') NOT NULL,
+  `file_path` varchar(255) DEFAULT NULL,
+  `link_url` varchar(255) DEFAULT NULL,
+  `year_level` enum('1st Year','2nd Year','3rd Year','4th Year') NOT NULL,
+  `course` varchar(50) NOT NULL,
+  `uploaded_by` varchar(50) NOT NULL,
+  `upload_date` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -555,187 +607,80 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`ID`, `ID_NUMBER`, `LASTNAME`, `FIRSTNAME`, `MIDDLENAME`, `COURSE`, `YEAR`, `USERNAME`, `PASSWORD`, `EMAIL`, `ADDRESS`, `SESSION`, `IMAGE`, `CREATED_AT`, `user_type`, `POINTS`, `current_points`, `total_points_earned`, `sessions_earned`) VALUES
-(1, 26683320, 'Monreal', 'Jeff', 'Ranido', 'BSIT', 3, 'j123', '$2y$10$lAJIYBRLFRVoUVjDHIX58.1ijRyVeJtJBZ9gLENVIkr.v26ZMjIdi', 'j123@gmail.com', 'jeff@email.com', 23, NULL, '2025-05-08 14:35:17', 'student', 0, 0, 0, 0),
-(2, 999999, 'CSS', 'Admin', NULL, NULL, NULL, 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin@uc.edu.ph', NULL, 30, NULL, '2025-05-08 14:36:00', 'admin', 0, 0, 0, 0),
-(3, 11111111, 'Sagaral', 'Alexus', 'Ranido', 'BSIT', 3, 'alex123', '$2y$10$8TdYXm5.Rrz77MYeGGGZP.OjFnhtm6MfaQsdrYFhmXDWiPyQ9zqT.', 'axie@gmail.com', 'Gudalupe', 28, NULL, '2025-05-08 19:41:40', 'student', 0, 0, 0, 0);
-
---
--- Table structure for table `points`
---
-
-CREATE TABLE `points` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `student_id` int(11) NOT NULL,
-  `points_earned` int(11) NOT NULL,
-  `points_reason` text NOT NULL,
-  `awarded_by` varchar(50) NOT NULL,
-  `awarded_date` timestamp NOT NULL DEFAULT current_timestamp(),
-  `converted_to_session` tinyint(1) DEFAULT 0,
-  PRIMARY KEY (`id`),
-  KEY `student_id` (`student_id`),
-  CONSTRAINT `points_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `users` (`ID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
-CREATE TABLE `lab_schedules` (
-  `schedule_id` int(11) NOT NULL AUTO_INCREMENT,
-  `lab_room` varchar(10) NOT NULL,
-  `title` varchar(255) NOT NULL,
-  `description` text,
-  `schedule_image` varchar(255) NOT NULL,
-  `uploaded_by` varchar(100) NOT NULL,
-  `upload_date` timestamp NOT NULL DEFAULT current_timestamp,
-  PRIMARY KEY (`schedule_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `resources`
---
-
-CREATE TABLE `resources` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `title` varchar(255) NOT NULL,
-  `description` text,
-  `file_path` varchar(255) NOT NULL,
-  `uploaded_by` varchar(50) NOT NULL,
-  `upload_date` timestamp NOT NULL DEFAULT current_timestamp,
-  `category` varchar(50) DEFAULT NULL,
-  `status` enum('active','inactive') DEFAULT 'active',
-  PRIMARY KEY (`id`),
-  KEY `uploaded_by` (`uploaded_by`),
-  CONSTRAINT `resources_ibfk_1` FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`USERNAME`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+(1, 22683320, 'Monreal', 'Jeff ', 'Ranido', 'BSIT', 3, 'j123', '$2y$10$nBxx8z1OXvFdLpUmzK8bl...HWuPZAOn33Au8sYjkG9PM4FqXY5le', 'jeff@gmail.com', 'Cebu City', 30, NULL, '2025-05-15 03:33:53', 'student', 0, 0, 0, 0),
+(2, 11111111, 'Sagaral', 'Alexus', '', 'BSIT', 3, 'alex123', '$2y$10$R8LUTMfnppkVlbtnX438sOjWyg0Qr2ijW1pwu6VFcHln..4CkBok.', 'alex@gmail.com', 'Cebu City', 30, NULL, '2025-05-15 03:34:37', 'student', 0, 0, 0, 0),
+(3, 222222222, 'Catubig', 'Mark', '', 'BSIT', 3, 'mark123', '$2y$10$HDVDfCzPpyNMCGaUfqf/ZOZwMyM9f5/qZyMRZv0ies978wDFdp98K', 'mark@gmail.com', 'Cebu City', 30, NULL, '2025-05-15 03:35:13', 'student', 0, 0, 0, 0),
+(4, 33333333, 'Palacio', 'Real Jhon', '', 'BSIT', 3, 'real123', '$2y$10$beFM5LFnkLBPBcjJPXEDRuWPyYVNule9/.Klt5xhZmIgW8dVf99j6', 'real@gmail.com', 'Cebu City', 30, NULL, '2025-05-15 03:35:55', 'student', 0, 0, 0, 0),
+(5, 44444444, 'Paraiso', 'Justine', '', 'BSIT', 3, 'just123', '$2y$10$lVHQY7ubKfbWxTfvjSb.FOi01kwy5fq4POMiJuvG/JiQsL1nRNjCm', 'just@gmail.com', 'Cebu City', 30, NULL, '2025-05-15 03:36:27', 'student', 0, 0, 0, 0),
+(6, 55555555, 'Cabunilas', 'Vince', '', 'BSIT', 3, 'vince123', '$2y$10$eB2QC.ZjYT.c8GDNeO.D7OaT6ANNRlID6GoAqx1NFgS3mbOL2IUxm', 'vince@gmail.com', 'Cebu City', 30, NULL, '2025-05-15 03:37:13', 'student', 0, 0, 0, 0),
+(10, 0, 'CSS', 'Admin', NULL, NULL, NULL, 'admin', '$2y$10$UEU1A58wuix.i8aaDVSd7.XjyheTwDnG0DvBTpwLTe.6YAKIFVNNS', 'admin@gmail.com', NULL, 30, NULL, '2025-05-15 04:15:08', 'admin', 0, 0, 0, 0);
 
 --
 -- Indexes for dumped tables
 --
 
 --
--- Indexes for table `announcements`
+-- Indexes for table `lab_schedules`
 --
-ALTER TABLE `announcements`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `admin_username` (`admin_username`);
+ALTER TABLE `lab_schedules`
+  ADD PRIMARY KEY (`schedule_id`);
 
 --
--- Indexes for table `computers`
+-- Indexes for table `points`
 --
-ALTER TABLE `computers`
+ALTER TABLE `points`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `unique_pc_lab` (`pc_number`,`lab_room_id`);
+  ADD KEY `student_id` (`student_id`);
 
 --
--- Indexes for table `feedback`
+-- Indexes for table `resources`
 --
-ALTER TABLE `feedback`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `session_id` (`session_id`),
-  ADD KEY `user_id` (`user_id`);
-
---
--- Indexes for table `lab_rooms`
---
-ALTER TABLE `lab_rooms`
+ALTER TABLE `resources`
   ADD PRIMARY KEY (`id`);
-
---
--- Indexes for table `reservations`
---
-ALTER TABLE `reservations`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `student_id` (`student_id`);
-
---
--- Indexes for table `sit_in_sessions`
---
-ALTER TABLE `sit_in_sessions`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `student_id` (`student_id`);
 
 --
 -- Indexes for table `users`
 --
 ALTER TABLE `users`
-  ADD PRIMARY KEY (`ID`),
-  ADD UNIQUE KEY `ID_NUMBER` (`ID_NUMBER`),
-  ADD UNIQUE KEY `USERNAME` (`USERNAME`),
-  ADD UNIQUE KEY `EMAIL` (`EMAIL`);
+  ADD PRIMARY KEY (`ID`);
 
 --
 -- AUTO_INCREMENT for dumped tables
 --
 
 --
--- AUTO_INCREMENT for table `announcements`
+-- AUTO_INCREMENT for table `lab_schedules`
 --
-ALTER TABLE `announcements`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+ALTER TABLE `lab_schedules`
+  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `computers`
+-- AUTO_INCREMENT for table `points`
 --
-ALTER TABLE `computers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=512;
+ALTER TABLE `points`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `feedback`
+-- AUTO_INCREMENT for table `resources`
 --
-ALTER TABLE `feedback`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
-
---
--- AUTO_INCREMENT for table `lab_rooms`
---
-ALTER TABLE `lab_rooms`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
-
---
--- AUTO_INCREMENT for table `reservations`
---
-ALTER TABLE `reservations`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
-
---
--- AUTO_INCREMENT for table `sit_in_sessions`
---
-ALTER TABLE `sit_in_sessions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+ALTER TABLE `resources`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- Constraints for dumped tables
 --
 
 --
--- Constraints for table `announcements`
+-- Constraints for table `points`
 --
-ALTER TABLE `announcements`
-  ADD CONSTRAINT `announcements_ibfk_1` FOREIGN KEY (`admin_username`) REFERENCES `users` (`USERNAME`);
-
---
--- Constraints for table `feedback`
---
-ALTER TABLE `feedback`
-  ADD CONSTRAINT `feedback_ibfk_1` FOREIGN KEY (`session_id`) REFERENCES `sit_in_sessions` (`id`),
-  ADD CONSTRAINT `feedback_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`ID`);
-
---
--- Constraints for table `reservations`
---
-ALTER TABLE `reservations`
-  ADD CONSTRAINT `reservations_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `users` (`ID_NUMBER`);
-
---
--- Constraints for table `sit_in_sessions`
---
-ALTER TABLE `sit_in_sessions`
-  ADD CONSTRAINT `sit_in_sessions_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `users` (`ID_NUMBER`);
+ALTER TABLE `points`
+  ADD CONSTRAINT `points_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `users` (`ID`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

@@ -45,19 +45,43 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     // If all checks pass, proceed with registration
-    $lName = $_POST['lName'];
-    $fName = $_POST['fName'];
-    $MdName = $_POST['MdName'];
-    $Course = $_POST['Course'];
-    $Yrlevel = $_POST['Yrlevel'];
-    $password = $_POST['password'];
-    $address = $_POST['address'];
+    $user_type = $_POST['user_type'];
+    
+    if ($user_type == 'admin') {
+        // Set default admin values
+        $IDNO = 0;
+        $lName = 'CSS';
+        $fName = 'Admin';
+        $MdName = NULL;
+        $Course = NULL;
+        $Yrlevel = NULL;
+        $address = NULL;
+        $session = 30;
+        $image = NULL;
+        $email = $_POST['email'] ?: '';  // If empty, set to ''
+    } else {
+        // For student users, use form values
+        $IDNO = $_POST['IDNO'];
+        $lName = $_POST['lName'];
+        $fName = $_POST['fName'];
+        $MdName = $_POST['MdName'];
+        $Course = $_POST['Course'];
+        $Yrlevel = $_POST['Yrlevel'];
+        $address = $_POST['address'];
+        $session = 30;
+        $image = NULL;
+        $email = $_POST['email'];
+    }
 
+    $username = $_POST['username'];
+    $password = $_POST['password'];
     $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-    $stmt = $conn->prepare("INSERT INTO users (ID_NUMBER, LASTNAME, FIRSTNAME, MIDDLENAME, COURSE, YEAR, USERNAME, PASSWORD, EMAIL, ADDRESS, user_type) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'student')");
-    $stmt->bind_param("issssissss", $IDNO, $lName, $fName, $MdName, $Course, $Yrlevel, $username, $hashedPassword, $email, $address);
+    $stmt = $conn->prepare("INSERT INTO users (ID_NUMBER, LASTNAME, FIRSTNAME, MIDDLENAME, COURSE, YEAR, USERNAME, 
+                           PASSWORD, EMAIL, ADDRESS, SESSION, IMAGE, user_type) 
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("issssissssiss", $IDNO, $lName, $fName, $MdName, $Course, $Yrlevel, $username, 
+                      $hashedPassword, $email, $address, $session, $image, $user_type);
 
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'message' => 'Registration successful!']);
@@ -112,7 +136,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             <form method="post" action="" class="space-y-6">
                 <!-- Student Information Section -->
-                <div class="bg-white/5 rounded-xl p-6 space-y-4">
+                <div class="bg-white/5 rounded-xl p-6 space-y-4 student-only">
                     <h3 class="text-lg font-medium text-white mb-4">Student Information</h3>
                     
                     <div class="input-group">
@@ -168,6 +192,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <div class="bg-white/5 rounded-xl p-6 space-y-4">
                     <h3 class="text-lg font-medium text-white mb-4">Account Information</h3>
                     
+                    <div class="input-group">
+                        <i class="fas fa-users-cog absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <select name="user_type" required 
+                                class="form-input w-full pl-10 pr-4 py-3 rounded-lg text-white border border-transparent focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none appearance-none">
+                            <option value="" disabled selected class="text-gray-400 bg-gray-800">Select User Type</option>
+                            <option value="student" class="bg-gray-800">Student</option>
+                            <option value="admin" class="bg-gray-800">Admin</option>
+                        </select>
+                    </div>
+
                     <div class="input-group">
                         <i class="fas fa-user-circle absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                         <input type="text" name="username" placeholder="Username" required 
@@ -232,6 +266,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         alert('An error occurred. Please try again.');
                     }
                 });
+            });
+
+            // Add this after your existing jQuery code
+            $('select[name="user_type"]').on('change', function() {
+                const studentFields = $('.student-only');
+                if (this.value === 'student') {
+                    studentFields.show();
+                    studentFields.find('input, select').prop('required', true);
+                } else {
+                    studentFields.hide();
+                    studentFields.find('input, select').prop('required', false);
+                }
             });
         });
     </script>
