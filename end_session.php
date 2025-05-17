@@ -1,8 +1,15 @@
 <?php
+// THIS FILE IS COMPLETELY DISABLED
+// All handling now happens in sit-in.php
 session_start();
 require_once 'database.php';
 
-if (isset($_POST['end_session'])) {
+// ALWAYS redirect to sit-in.php
+header("Location: sit-in.php");
+exit();
+
+// This code is kept for reference but is completely disabled
+if (false) { // This condition will never be true
     // Handle direct sit-in timeout only
     $session_id = $_POST['session_id'];
     $student_id = $_POST['student_id'];

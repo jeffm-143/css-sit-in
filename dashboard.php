@@ -43,7 +43,8 @@ $announcements_query = $conn->query("
     ORDER BY a.date_posted DESC
 ");
 
-$conn->close();
+// Don't close the connection yet - we need it for notifications
+// $conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -61,10 +62,69 @@ $conn->close();
     <header class="bg-gradient-to-r from-blue-800 to-indigo-800 shadow-lg">
         <div class="container mx-auto px-4">
             <nav class="flex items-center justify-between h-16">
-                <h2 class="text-2xl font-bold text-white">Dashboard</h2>
-                <div class="flex items-center space-x-8">
+                <h2 class="text-2xl font-bold text-white">Dashboard</h2>                <div class="flex items-center space-x-8">
                     <ul class="flex space-x-6">
-                        <li><a href="#" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-bell mr-1"></i>Notification</a></li>
+                        <!-- Notification Bell -->
+                        <li class="relative">
+                            <button id="notificationButton" class="text-white hover:text-yellow-400 transition-colors">
+                                <i class="fas fa-bell text-xl"></i>
+                                <?php
+                                $notif_count = $conn->prepare("SELECT COUNT(*) as count FROM notifications WHERE ID_NUMBER = ? AND is_read = 0");
+                                $notif_count->bind_param("i", $IDNO);
+                                $notif_count->execute();
+                                $count = $notif_count->get_result()->fetch_assoc()['count'];
+                                if ($count > 0):
+                                ?>
+                                <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" id="notificationCount">
+                                    <?php echo $count; ?>
+                                </span>
+                                <?php endif; ?>
+                            </button>
+                            <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50">
+                                <div class="p-4 border-b border-gray-200">
+                                    <h3 class="text-lg font-semibold text-gray-800">Notifications</h3>
+                                </div>
+                                <div class="max-h-96 overflow-y-auto" id="notificationList">
+                                    <?php
+                                    $notifications_query = $conn->prepare("
+                                        SELECT * FROM notifications 
+                                        WHERE ID_NUMBER = ? AND is_read = 0 
+                                        ORDER BY created_at DESC LIMIT 5
+                                    ");
+                                    $notifications_query->bind_param("i", $IDNO);
+                                    $notifications_query->execute();
+                                    $notifications = $notifications_query->get_result();
+                                    
+                                    if ($notifications->num_rows > 0):
+                                        while($notif = $notifications->fetch_assoc()):
+                                    ?>
+                                        <div class="notification-item p-4 border-b border-gray-100 hover:bg-gray-50" 
+                                             data-notification-id="<?php echo $notif['id']; ?>" 
+                                             style="transition: opacity 0.3s ease-out;">
+                                            <div class="flex justify-between">
+                                                <div>
+                                                    <p class="text-sm text-gray-800"><?php echo htmlspecialchars($notif['message']); ?></p>
+                                                    <p class="text-xs text-gray-500 mt-1"><?php echo date('M d, Y h:i A', strtotime($notif['created_at'])); ?></p>
+                                                </div>
+                                                <?php if (!$notif['is_read']): ?>
+                                                <button onclick="markAsRead(<?php echo $notif['id']; ?>, this)" 
+                                                        class="text-xs text-blue-600 hover:text-blue-800 ml-2">
+                                                    Mark as read
+                                                </button>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    <?php 
+                                        endwhile;
+                                    else:
+                                    ?>
+                                        <div class="p-4 text-center text-gray-500">
+                                            No notifications
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </li>
                         <li><a href="dashboard.php" class="text-yellow-400 font-bold transition-colors"><i class="fas fa-home mr-1"></i>Home</a></li>
                         <li><a href="edit_profile.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-user-edit mr-1"></i>Edit Profile</a></li>
                         <li><a href="history.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-history mr-1"></i>History</a></li>

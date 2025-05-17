@@ -66,21 +66,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $_SESSION['alert'] = ['type' => 'error', 'message' => 'Error updating computer status.'];
         }
-    }
-
-    // Handle reservation approval/rejection
+    }    // Handle reservation approval/rejection
     if (isset($_POST['approve_reservation'])) {
         $reservation_id = $_POST['reservation_id'];
-        
+
         // Start transaction
         $conn->begin_transaction();
         
         try {
-            // First, get the reservation details
+            // Get the specific reservation and its computer
             $get_reservation = $conn->prepare("
-                SELECT lab_room, pc_number 
-                FROM reservations 
-                WHERE id = ?
+                SELECT r.*, c.id as computer_id 
+                FROM reservations r
+                LEFT JOIN computers c ON c.lab_room_id = r.lab_room AND c.pc_number = r.pc_number
+                WHERE r.id = ? AND r.status = 'pending'
+                LIMIT 1
             ");
             $get_reservation->bind_param("i", $reservation_id);
             $get_reservation->execute();
@@ -88,25 +88,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (!$reservation) {
                 throw new Exception("Reservation not found");
-            }
-
-            // Update reservation status to approved
+            }            // Update only this specific reservation status to approved
             $update_reservation = $conn->prepare("
                 UPDATE reservations 
-                SET status = 'approved' 
-                WHERE id = ?
+                SET status = 'approved', 
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND status = 'pending'
+                LIMIT 1
             ");
             $update_reservation->bind_param("i", $reservation_id);
-            $update_reservation->execute();
-
-            // Update computer status to in_use
+            
+            if (!$update_reservation->execute() || $update_reservation->affected_rows !== 1) {
+                throw new Exception("Failed to update reservation or reservation already processed");
+            }// Check if computer exists, if not create it
+            $check_computer = $conn->prepare("
+                SELECT id FROM computers 
+                WHERE lab_room_id = ? AND pc_number = ?
+            ");
+            $check_computer->bind_param("ss", $reservation['lab_room'], $reservation['pc_number']);
+            $check_computer->execute();
+            $result = $check_computer->get_result();
+            
+            if ($result->num_rows === 0) {
+                // Create the computer if it doesn't exist
+                $create_computer = $conn->prepare("
+                    INSERT INTO computers (lab_room_id, pc_number, status) 
+                    VALUES (?, ?, 'available')
+                ");
+                $create_computer->bind_param("ss", $reservation['lab_room'], $reservation['pc_number']);
+                $create_computer->execute();
+            }
+              // Update computer status to in_use if it's available
             $update_computer = $conn->prepare("
                 UPDATE computers 
                 SET status = 'in_use' 
-                WHERE lab_room_id = ? AND pc_number = ?
+                WHERE lab_room_id = ? 
+                AND pc_number = ? 
+                AND status IN ('available', 'maintenance')
+                LIMIT 1
             ");
             $update_computer->bind_param("ss", $reservation['lab_room'], $reservation['pc_number']);
-            $update_computer->execute();
+            
+            if (!$update_computer->execute()) {
+                throw new Exception("Failed to update computer status for Lab {$reservation['lab_room']}, PC {$reservation['pc_number']}");
+            }
+            
+            if ($update_computer->affected_rows !== 1) {
+                throw new Exception("Computer is already in use or not available in Lab {$reservation['lab_room']}, PC {$reservation['pc_number']}");
+            }
+            
+            // Verify the update
+            $verify = $conn->prepare("SELECT status FROM computers WHERE lab_room_id = ? AND pc_number = ?");
+            $verify->bind_param("ss", $reservation['lab_room'], $reservation['pc_number']);
+            $verify->execute();
+            $result = $verify->get_result()->fetch_assoc();
+              if (!$result || $result['status'] !== 'in_use') {
+                throw new Exception("Failed to verify computer status update");
+            }
+
+            // Add notification for student
+            $notify_student = $conn->prepare("
+                INSERT INTO notifications (ID_NUMBER, message, type, is_read, created_at) 
+                VALUES (?, 'Your lab reservation has been approved!', 'reservation_approved', 0, CURRENT_TIMESTAMP)
+            ");
+            $notify_student->bind_param("i", $reservation['student_id']);
+            $notify_student->execute();
 
             // Commit transaction
             $conn->commit();
@@ -133,6 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header("Location: reservation-admin.php");
     exit();
 }
+
 
 // Get all lab rooms
 $lab_rooms = $conn->query("SELECT * FROM lab_rooms ORDER BY room_number");
@@ -209,13 +256,19 @@ function checkReservation($time_in, $time_out, $reservation_date) {
     return 'past';
 }
 
-// Update get_reservations query to not auto-timeout
+// Update get_reservations query to sort by date and time
 $reservations = $conn->query("
     SELECT r.*, u.FIRSTNAME, u.LASTNAME, u.ID_NUMBER
     FROM reservations r
     JOIN users u ON r.student_id = u.ID_NUMBER
     WHERE r.status IN ('pending', 'approved')
-    ORDER BY r.reservation_date DESC, r.time_in ASC
+    ORDER BY 
+        CASE 
+            WHEN r.status = 'pending' THEN 0
+            ELSE 1
+        END,
+        r.reservation_date ASC,
+        CAST(r.time_in AS TIME) ASC
 ");
 
 // Get unique lab rooms for filter
@@ -571,7 +624,7 @@ if (isset($_GET['get_computers'])) {
                             grid.appendChild(div);
                         });
                         
-                        roomHeading.textContent = `Computer Status Management`;
+                        roomHeading.textContent = `Computer Control`;
                         grid.classList.remove('opacity-0');
                         grid.classList.add('grid-transition');
                         

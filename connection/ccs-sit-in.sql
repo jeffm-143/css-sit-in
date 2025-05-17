@@ -530,6 +530,13 @@ CREATE TABLE `reservations` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+ALTER TABLE `sit_in_sessions` 
+ADD COLUMN `reservation_id` int(11) NULL DEFAULT NULL AFTER `student_id`;
+
+-- Add an index to improve query performance
+ALTER TABLE `sit_in_sessions`
+ADD INDEX `idx_reservation_id` (`reservation_id`);
+
 --
 -- Dumping data for table `reservations`
 --

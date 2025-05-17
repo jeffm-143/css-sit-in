@@ -92,6 +92,67 @@ $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'Student';
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: linear-gradient(to bottom, #2563eb, #1e3a8a);
         }
+
+        /* Enhanced visuals */
+        h1 {
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .bg-gradient-to-r {
+            background-size: 200% 200%;
+            animation: gradientAnimation 3s ease infinite;
+        }
+        
+        @keyframes gradientAnimation {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+        
+        .btn-primary {
+            @apply bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md;
+        }
+        
+        .btn-primary:hover {
+            @apply from-blue-700 to-indigo-700;
+        }
+        
+        .card {
+            @apply bg-white rounded-lg shadow-md overflow-hidden;
+        }
+        
+        .card-header {
+            @apply bg-gradient-to-r from-blue-500 to-indigo-500 text-white p-4 rounded-t-lg;
+        }
+        
+        .card-body {
+            @apply p-4;
+        }
+        
+        .footer {
+            @apply bg-gray-800 text-white py-4;
+        }
+        
+        .footer a {
+            @apply text-gray-300 hover:text-white;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .lg\\:col-span-1 {
+                @apply col-span-1;
+            }
+            
+            .lg\\:col-span-3 {
+                @apply col-span-1;
+            }
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
@@ -99,14 +160,76 @@ $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'Student';
     <header class="bg-gradient-to-r from-blue-800 to-indigo-800 shadow-lg">
         <div class="container mx-auto px-4">
             <nav class="flex items-center justify-between h-16">
-                <h2 class="text-2xl font-bold text-white">Learning Resources</h2>
+                <h2 class="text-2xl font-bold text-white">History</h2>
                 <div class="flex items-center space-x-8">
                     <ul class="flex space-x-6">
-                        <li><a href="#" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-bell mr-1"></i>Notification</a></li>
+                        <!-- Notification Bell -->
+                        <li class="relative">
+                            <button id="notificationButton" class="text-white hover:text-yellow-400 transition-colors">
+                                <i class="fas fa-bell text-xl"></i>
+                                <?php
+                                $notif_count = $conn->prepare("SELECT COUNT(*) as count FROM notifications WHERE ID_NUMBER = ? AND is_read = 0");
+                                $notif_count->bind_param("i", $IDNO);
+                                $notif_count->execute();
+                                $count = $notif_count->get_result()->fetch_assoc()['count'];
+                                if ($count > 0):
+                                ?>
+                                <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" id="notificationCount">
+                                    <?php echo $count; ?>
+                                </span>
+                                <?php endif; ?>
+                            </button>
+                            <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50">
+                                <div class="p-4 border-b border-gray-200">
+                                    <h3 class="text-lg font-semibold text-gray-800">Notifications</h3>
+                                </div>
+                                <div class="max-h-96 overflow-y-auto" id="notificationList">
+                                    <?php
+                                    $notifications_query = $conn->prepare("
+                                        SELECT * FROM notifications 
+                                        WHERE ID_NUMBER = ? AND is_read = 0 
+                                        ORDER BY created_at DESC LIMIT 5
+                                    ");
+                                    $notifications_query->bind_param("i", $IDNO);
+                                    $notifications_query->execute();
+                                    $notifications = $notifications_query->get_result();
+                                    
+                                    if ($notifications->num_rows > 0):
+                                        while($notif = $notifications->fetch_assoc()):
+                                    ?>
+                                        <div class="notification-item p-4 border-b border-gray-100 hover:bg-gray-50" 
+                                             data-notification-id="<?php echo $notif['id']; ?>" 
+                                             style="transition: opacity 0.3s ease-out;">
+                                            <div class="flex justify-between">
+                                                <div>
+                                                    <p class="text-sm text-gray-800"><?php echo htmlspecialchars($notif['message']); ?></p>
+                                                    <p class="text-xs text-gray-500 mt-1"><?php echo date('M d, Y h:i A', strtotime($notif['created_at'])); ?></p>
+                                                </div>
+                                                <?php if (!$notif['is_read']): ?>
+                                                <button onclick="markAsRead(<?php echo $notif['id']; ?>, this)" 
+                                                        class="text-xs text-blue-600 hover:text-blue-800 ml-2">
+                                                    Mark as read
+                                                </button>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    <?php 
+                                        endwhile;
+                                    else:
+                                    ?>
+                                        <div class="p-4 text-center text-gray-500">
+                                            No notifications
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </li>
                         <li><a href="dashboard.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-home mr-1"></i>Home</a></li>
                         <li><a href="edit_profile.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-user-edit mr-1"></i>Edit Profile</a></li>
-                        <li><a href="user_labsched.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-calendar-alt mr-1"></i>Lab Schedule</a></li>
-                        <li><a href="reservation.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-calendar-check mr-1"></i>Reservation</a></li>
+                        <li><a href="history.php" class="text-yellow-400 font-bold transition-colors"><i class="fas fa-history mr-1"></i>History</a></li>
+                        <li><a href="user_labsched.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-clock mr-1"></i>Lab Schedule</a></li>
+                        <li><a href="user_resources.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-book mr-1"></i>Lab Resources</a></li>
+                        <li><a href="reservation.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-calendar-alt mr-1"></i>Reservation</a></li>
                     </ul>
                     <a href="logout.php" class="bg-yellow-400 text-indigo-900 px-6 py-2 rounded-lg font-bold hover:bg-yellow-500 transition duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
                         <i class="fas fa-sign-out-alt mr-1"></i>Log out
@@ -115,17 +238,13 @@ $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'Student';
             </nav>
         </div>
     </header>
-
-    <div class="container mx-auto px-4 py-10 max-w-7xl">
-        <!-- Page Header -->
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-800">Learning Resources</h1>
-            <p class="text-gray-500 mt-2">Access course materials, references, and helpful links</p>
-        </div>
-        
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <!-- Resource Categories & Filters Sidebar -->
-            <div class="lg:col-span-1">
+    </header>    <div class="container mx-auto px-6 py-8 max-w-8xl">
+        <div class="text-center mb-8 bg-white p-6 rounded-2xl shadow-lg transform hover:scale-[1.01] transition-transform">
+            <h1 class="text-4xl font-extrabold text-gray-800 mb-3 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Learning Resources</h1>
+            <p class="text-gray-600 text-lg">Access course materials, references, and helpful links</p>
+        </div>          <div class="mb-8">
+            <!-- Resource Categories, Filters, and Help Section -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- Resource Search -->
                 <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-6 custom-shadow">
                     <div class="profile-gradient p-4 border-b border-blue-100">
@@ -230,62 +349,11 @@ $username = isset($_SESSION['username']) ? $_SESSION['username'] : 'Student';
                     </div>
                 </div>
 
-                <!-- Help Section -->
-                <div class="bg-white rounded-xl shadow-lg overflow-hidden custom-shadow">
-                    <div class="profile-gradient p-4 border-b border-blue-100">
-                        <h2 class="text-lg font-semibold text-gray-800 flex items-center">
-                            <i class="fas fa-question-circle text-blue-600 mr-2"></i>
-                            Need Help?
-                        </h2>
-                    </div>
-                    <div class="p-4">
-                        <p class="text-sm text-gray-600 mb-4">
-                            Can't find what you're looking for? Contact your instructor or department for additional resources.
-                        </p>
-                        <a href="mailto:css@pup.edu.ph" class="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-md hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                            <i class="fas fa-envelope mr-2"></i> Contact Support
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Resources Content Area -->
-            <div class="lg:col-span-3">
-                <!-- Resources Statistics -->
-                <div class="bg-white rounded-xl shadow-lg p-6 mb-6 custom-shadow">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-gray-500">Total Resources</p>
-                                <h3 class="text-2xl font-bold text-blue-800"><?php echo count($resources); ?></h3>
-                            </div>
-                            <div class="bg-blue-200 rounded-full p-3">
-                                <i class="fas fa-book-open text-blue-600 text-xl"></i>
-                            </div>
-                        </div>
-                        <div class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-4 flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-gray-500">Files</p>
-                                <h3 class="text-2xl font-bold text-purple-800"><?php echo $fileCount; ?></h3>
-                            </div>
-                            <div class="bg-purple-200 rounded-full p-3">
-                                <i class="fas fa-file-alt text-purple-600 text-xl"></i>
-                            </div>
-                        </div>
-                        <div class="bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-lg p-4 flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-gray-500">External Links</p>
-                                <h3 class="text-2xl font-bold text-indigo-800"><?php echo $linkCount; ?></h3>
-                            </div>
-                            <div class="bg-indigo-200 rounded-full p-3">
-                                <i class="fas fa-link text-indigo-600 text-xl"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Resources Grid -->
-                <div id="resources-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            </div>            <!-- Resources Content Area -->
+            <div class="mt-8">
+        
+                </div>                <!-- Resources Grid -->
+                <div id="resources-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <?php if (count($resources) > 0): ?>
                         <?php foreach ($resources as $resource): ?>
                             <div class="resource-card bg-white rounded-xl overflow-hidden shadow-lg custom-shadow" 

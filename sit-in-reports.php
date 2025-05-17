@@ -13,42 +13,66 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1; // Default to page 1
 $offset = ($page - 1) * $entries_per_page;
 
 // Handle filters
-$end_date = !empty($_POST['end_date']) ? $_POST['end_date'] : null;
+$end_date = !empty($_POST['end_date']) ? $_POST['end_date'] : (!empty($_POST['timeout_at']) ? $_POST['timeout_at'] : null);
 $purpose_filter = !empty($_POST['purpose']) ? $_POST['purpose'] : null;
 $lab_filter = !empty($_POST['lab']) ? $_POST['lab'] : null;
 
-// Get unique purposes and labs for filter dropdowns
-$purposeQuery = "SELECT DISTINCT purpose FROM sit_in_sessions";
-$labQuery = "SELECT DISTINCT lab_room FROM sit_in_sessions";
+// Get unique purposes and labs for filter dropdowns from both tables
+$purposeQuery = "SELECT DISTINCT purpose FROM (
+    SELECT purpose FROM sit_in_sessions
+    UNION
+    SELECT purpose FROM reservations
+) AS combined_purposes";
+$labQuery = "SELECT DISTINCT lab_room FROM (
+    SELECT lab_room FROM sit_in_sessions
+    UNION
+    SELECT lab_room FROM reservations
+) AS combined_labs
+ORDER BY lab_room";
 $purposes = $conn->query($purposeQuery)->fetch_all(MYSQLI_ASSOC);
 $labs = $conn->query($labQuery)->fetch_all(MYSQLI_ASSOC);
 
 // Build the query based on filters
-$query = "SELECT s.*, u.FIRSTNAME, u.LASTNAME, 
-          CASE WHEN s.reservation_id IS NOT NULL THEN 'reservation' ELSE 'direct' END as type
-          FROM sit_in_sessions s
-          JOIN users u ON s.student_id = u.ID_NUMBER
-          WHERE s.status = 'completed'";
+$query = "SELECT * FROM (
+            SELECT 
+                s.student_id, s.lab_room, s.purpose,
+                s.start_time, s.end_time, s.status,
+                u.FIRSTNAME, u.LASTNAME,
+                'direct' as type
+            FROM sit_in_sessions s
+            JOIN users u ON s.student_id = u.ID_NUMBER
+            WHERE s.status = 'completed'
+            UNION ALL
+            SELECT 
+                r.student_id, r.lab_room, r.purpose,
+                r.time_in as start_time, r.timeout_at as end_time, r.status,
+                u.FIRSTNAME, u.LASTNAME,
+                'reservation' as type
+            FROM reservations r
+            JOIN users u ON r.student_id = u.ID_NUMBER
+            WHERE r.status = 'approved' AND r.timeout_at IS NOT NULL
+          ) combined_records WHERE 1=1";
 $params = [];
 $types = "";
 
 if ($end_date) {
-    $query .= " AND DATE(s.end_time) = ?";
+    // Handle date filtering for both types using the aliased end_time column
+    $query .= " AND DATE(end_time) = ?";
     $params[] = $end_date;
     $types .= "s";
 }
 if ($purpose_filter) {
-    $query .= " AND s.purpose = ?";
+    $query .= " AND purpose = ?";
     $params[] = $purpose_filter;
     $types .= "s";
 }
 if ($lab_filter) {
-    $query .= " AND s.lab_room = ?";
+    $query .= " AND lab_room = ?";
     $params[] = $lab_filter;
     $types .= "s";
 }
 
-$query .= " ORDER BY DATE(s.end_time) ASC LIMIT ? OFFSET ?";
+$query .= " ORDER BY DATE(end_time) ASC LIMIT ? OFFSET ?";
 $params[] = $entries_per_page;
 $params[] = $offset;
 $types .= "ii";
@@ -63,20 +87,27 @@ $stmt->execute();
 $records = $stmt->get_result();
 
 // Update the count query to match the filters
-$count_query = "SELECT COUNT(*) as total 
-                FROM sit_in_sessions s
-                JOIN users u ON s.student_id = u.ID_NUMBER
-                WHERE s.status = 'completed'";
+$count_query = "SELECT COUNT(*) as total FROM (
+    SELECT s.student_id, s.end_time, s.purpose, s.lab_room
+    FROM sit_in_sessions s
+    JOIN users u ON s.student_id = u.ID_NUMBER
+    WHERE s.status = 'completed'
+    UNION ALL
+    SELECT r.student_id, r.timeout_at as end_time, r.purpose, r.lab_room
+    FROM reservations r
+    JOIN users u ON r.student_id = u.ID_NUMBER
+    WHERE r.status = 'approved' AND r.timeout_at IS NOT NULL
+) combined WHERE 1=1";
 $count_params = [];
 $count_types = "";
 
 if ($end_date) {
-    $count_query .= " AND DATE(s.end_time) = ?";
+    $count_query .= " AND DATE(end_time) = ?";
     $count_params[] = $end_date;
     $count_types .= "s";
 }
 if ($purpose_filter) {
-    $count_query .= " AND s.purpose = ?";
+    $count_query .= " AND purpose = ?";
     $count_params[] = $purpose_filter;
     $count_types .= "s";
 }
@@ -93,12 +124,20 @@ if (isset($_GET['export'])) {
     $exportType = $_GET['export'];
 
     // Fetch data again for export
-    $query = "
-        SELECT s.*, u.FIRSTNAME, u.LASTNAME 
-        FROM sit_in_sessions s
-        JOIN users u ON s.student_id = u.ID_NUMBER
-        WHERE s.status = 'completed'
-        ORDER BY s.end_time ASC";
+$query = "SELECT * FROM (
+    SELECT s.*, u.FIRSTNAME, u.LASTNAME, 'direct' as type,
+           s.end_time as end_time
+    FROM sit_in_sessions s
+    JOIN users u ON s.student_id = u.ID_NUMBER
+    WHERE s.status = 'completed'
+    UNION ALL
+    SELECT r.*, u.FIRSTNAME, u.LASTNAME, 'reservation' as type,
+           r.timeout_at as end_time
+    FROM reservations r
+    JOIN users u ON r.student_id = u.ID_NUMBER
+    WHERE r.status = 'approved' AND r.timeout_at IS NOT NULL
+) combined_records
+ORDER BY DATE(end_time) ASC";
     $records = $conn->query($query);
 
     if ($exportType === 'csv') {
@@ -167,13 +206,21 @@ if (isset($_GET['export'])) {
         $offset = ($page - 1) * $entries_per_page;
 
         // Fetch records with pagination for PDF
-        $pdf_query = "
-            SELECT s.*, u.FIRSTNAME, u.LASTNAME 
+        $pdf_query = "SELECT * FROM (
+            SELECT s.*, u.FIRSTNAME, u.LASTNAME, 'direct' as type,
+                   s.end_time as end_time
             FROM sit_in_sessions s
             JOIN users u ON s.student_id = u.ID_NUMBER
             WHERE s.status = 'completed'
-            ORDER BY s.end_time ASC
-            LIMIT ? OFFSET ?";
+            UNION ALL
+            SELECT r.*, u.FIRSTNAME, u.LASTNAME, 'reservation' as type,
+                   r.timeout_at as end_time
+            FROM reservations r
+            JOIN users u ON r.student_id = u.ID_NUMBER
+            WHERE r.status = 'approved' AND r.timeout_at IS NOT NULL
+        ) combined_records
+        ORDER BY DATE(end_time) ASC
+        LIMIT ? OFFSET ?";
         $pdf_stmt = $conn->prepare($pdf_query);
         $pdf_stmt->bind_param('ii', $entries_per_page, $offset);
         $pdf_stmt->execute();
@@ -346,12 +393,13 @@ if (isset($_GET['export'])) {
 
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
+<head>    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sit-in Reports</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script> 
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         function printReport() {
             // Store the current page content
@@ -463,6 +511,43 @@ if (isset($_GET['export'])) {
             // Export the workbook to an .xlsx file
             XLSX.writeFile(workbook, 'sit_in_reports.xlsx');
         }
+
+        function submitFilters() {
+            const date = document.getElementById('end_date').value;
+            const purpose = document.getElementById('purpose').value;
+            const lab = document.getElementById('lab').value;
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = window.location.href;
+
+            if (date) {
+                const dateInput = document.createElement('input');
+                dateInput.type = 'hidden';
+                dateInput.name = 'end_date';
+                dateInput.value = date;
+                form.appendChild(dateInput);
+            }
+            
+            if (purpose) {
+                const purposeInput = document.createElement('input');
+                purposeInput.type = 'hidden';
+                purposeInput.name = 'purpose';
+                purposeInput.value = purpose;
+                form.appendChild(purposeInput);
+            }
+            
+            if (lab) {
+                const labInput = document.createElement('input');
+                labInput.type = 'hidden';
+                labInput.name = 'lab';
+                labInput.value = lab;
+                form.appendChild(labInput);
+            }
+
+            document.body.appendChild(form);
+            form.submit();
+        }
     </script>
 </head>
 <body class="bg-gray-100">
@@ -483,20 +568,18 @@ if (isset($_GET['export'])) {
             </select>
             <span class="text-sm font-medium">entries</span>
             </form>
-        </div>
-
-        <!-- Updated Filter Form -->
-        <form method="POST" class="flex gap-4 mb-6 flex-wrap items-center bg-white p-4 rounded-lg shadow">
+        </div>        <!-- Updated Filter Form -->
+        <div class="flex gap-4 mb-6 flex-wrap items-center bg-white p-4 rounded-lg shadow">
             <div class="flex items-center gap-2">
                 <label class="font-medium">Select Date:</label>
-                <input type="date" name="end_date" class="border rounded px-3 py-2" 
+                <input type="date" id="end_date" class="border rounded px-3 py-2" 
                        value="<?php echo isset($_POST['end_date']) ? $_POST['end_date'] : ''; ?>"
-                       required>
+                       onchange="submitFilters()">
             </div>
             
             <div class="flex items-center gap-2">
                 <label class="font-medium">Purpose:</label>
-                <select name="purpose" class="border rounded px-3 py-2">
+                <select id="purpose" class="border rounded px-3 py-2" onchange="submitFilters()">
                     <option value="">All Purposes</option>
                     <?php foreach ($purposes as $p): ?>
                         <option value="<?php echo htmlspecialchars($p['purpose']); ?>"
@@ -509,7 +592,7 @@ if (isset($_GET['export'])) {
 
             <div class="flex items-center gap-2">
                 <label class="font-medium">Lab:</label>
-                <select name="lab" class="border rounded px-3 py-2">
+                <select id="lab" class="border rounded px-3 py-2" onchange="submitFilters()">
                     <option value="">All Labs</option>
                     <?php foreach ($labs as $l): ?>
                         <option value="<?php echo htmlspecialchars($l['lab_room']); ?>"
@@ -520,7 +603,6 @@ if (isset($_GET['export'])) {
                 </select>
             </div>
 
-            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Search</button>
             <a href="sit-in-reports.php" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Reset</a>
 
             <!-- Export Buttons -->
@@ -535,10 +617,10 @@ if (isset($_GET['export'])) {
 
 
         <!-- Table -->
-        <div class="bg-white shadow-md rounded-lg p-4">
-            <div class="max-h-[600px] overflow-y-auto"> <!-- Add this wrapper div -->
-                <div id="reportTable"> <!-- Wrap the table in a div with an ID for printing -->
-                    <table class="w-full border-collapse border border-gray-300">
+
+            <div class="max-h-[600px] overflow-y-auto w-full flex justify-center">
+                <div id="reportTable" class="w-full"> 
+                    <table class="w-full border-collapse border border-gray-300 mx-auto">
                         <thead class="bg-gray-200 sticky top-0"> <!-- Add sticky header -->                            <tr>
                                 <th class="border px-4 py-2">ID Number</th>
                                 <th class="border px-4 py-2">Name</th>
@@ -558,10 +640,12 @@ if (isset($_GET['export'])) {
                                     <?php 
                                         $typeClass = $row['type'] === 'reservation' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800';
                                         echo '<span class="px-2 py-1 rounded ' . $typeClass . '">' . 
-                                             ucfirst(htmlspecialchars($row['type'])) . 
-                                             '</span>';
+                                            ucfirst(htmlspecialchars($row['type'])) . 
+                                            '</span>';
                                     ?>
-                                </td>
+
+                                </td>                    
+
                                 <td class="border px-4 py-2"><?php echo htmlspecialchars($row['purpose']); ?></td>
                                 <td class="border px-4 py-2"><?php echo htmlspecialchars($row['lab_room']); ?></td>
                                 <td class="border px-4 py-2"><?php echo date("h:i:sa", strtotime($row['start_time'])); ?></td>
@@ -573,7 +657,7 @@ if (isset($_GET['export'])) {
                     </table>
                 </div> <!-- Close wrapper div -->
             </div>
-        </div>
+
 
         <!-- Pagination -->
         <div class="flex justify-center mt-4">

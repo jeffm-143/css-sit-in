@@ -2,8 +2,213 @@
 session_start();
 require_once 'database.php';
 
-// Fetch direct sit-in sessions (from sit_in_sessions table)
-$direct_sessions = $conn->query("
+// Process all form submissions first, before fetching data
+
+// Handle the "end session" form submission
+if (isset($_POST['end_session'])) {
+    // Debug information
+    error_log("Processing end_session request: ".print_r($_POST, true));
+    
+    $session_id = $_POST['session_id'];
+    $student_id = $_POST['student_id'];
+    $end_time = date('Y-m-d H:i:s');
+    
+    // Get current session count before updating
+    $session_query = $conn->prepare("SELECT SESSION FROM users WHERE ID_NUMBER = ?");
+    $session_query->bind_param("s", $student_id);
+    $session_query->execute();
+    $current_session = $session_query->get_result()->fetch_assoc()['SESSION'];
+        // Start a transaction for consistency
+    $conn->begin_transaction();
+    
+    try {
+        // First verify this is a valid active session for this specific student
+        $verify_session = $conn->prepare("
+            SELECT id FROM sit_in_sessions 
+            WHERE id = ? 
+            AND student_id = ? 
+            AND status = 'active'
+            LIMIT 1
+        ");
+        $verify_session->bind_param("is", $session_id, $student_id);
+        $verify_session->execute();
+        
+        if ($verify_session->get_result()->num_rows === 0) {
+            throw new Exception("Session not found or already completed");
+        }
+
+        // Update sit-in session status only for this specific student
+        $stmt = $conn->prepare("
+            UPDATE sit_in_sessions 
+            SET status = 'completed', 
+                end_time = ? 
+            WHERE id = ? 
+            AND student_id = ? 
+            AND status = 'active'
+            LIMIT 1
+        ");
+        $stmt->bind_param("sis", $end_time, $session_id, $student_id);
+        
+        if ($stmt->execute()) {
+            // Decrease session count
+            $new_session = $current_session - 1;
+            $update_session = $conn->prepare("UPDATE users SET SESSION = ? WHERE ID_NUMBER = ?");
+            $update_session->bind_param("is", $new_session, $student_id);
+            $update_session->execute();
+            
+            // Commit the transaction
+            $conn->commit();
+            $_SESSION['success'] = "Session ended successfully! Student has " . $new_session . " sessions remaining.";
+        } else {
+            throw new Exception("Failed to update session status");
+        }
+        
+        // Close statement after transaction is complete
+        $stmt->close();
+    } catch (Exception $e) {
+        // Rollback on any error
+        $conn->rollback();
+        $_SESSION['error'] = "Error: " . $e->getMessage();
+        error_log("Session timeout error: " . $e->getMessage());
+    }
+    
+    // Redirect to refresh the page
+    header("Location: sit-in.php");
+    exit();
+}
+
+// Handle reservation timeout with end time tracking
+if (isset($_POST['end_reservation'])) {
+    $reservation_id = $_POST['reservation_id'];
+    $student_id = $_POST['student_id'];
+    $now = date('Y-m-d H:i:s');
+    
+    // Start transaction
+    $conn->begin_transaction();
+    
+    try {
+        // First get current session count and verify student
+        $session_query = $conn->prepare("SELECT SESSION FROM users WHERE ID_NUMBER = ?");
+        $session_query->bind_param("s", $student_id);
+        $session_query->execute();
+        $session_result = $session_query->get_result();
+        
+        if ($session_result->num_rows === 0) {
+            throw new Exception("Student not found");
+        }
+        
+        $current_session = $session_result->fetch_assoc()['SESSION'];
+        
+        // Get reservation details and verify ownership
+        $get_reservation = $conn->prepare("
+            SELECT lab_room, pc_number 
+            FROM reservations 
+            WHERE id = ? 
+            AND student_id = ? 
+            AND status = 'approved'
+            AND timeout_at IS NULL
+        ");
+        $get_reservation->bind_param("is", $reservation_id, $student_id);
+        $get_reservation->execute();
+        $reservation = $get_reservation->get_result()->fetch_assoc();
+        
+        if (!$reservation) {
+            throw new Exception("Reservation not found or already timed out");
+        }
+        
+        // Record timeout for specific reservation only
+        $stmt = $conn->prepare("
+            UPDATE reservations 
+            SET timeout_at = ? 
+            WHERE id = ? 
+            AND student_id = ?
+            AND status = 'approved' 
+            AND timeout_at IS NULL
+            LIMIT 1
+        ");
+        $stmt->bind_param("sis", $now, $reservation_id, $student_id);
+        
+        // Update computer status to available for specific computer only
+        $update_computer = $conn->prepare("
+            UPDATE computers 
+            SET status = 'available' 
+            WHERE lab_room_id = ? 
+            AND pc_number = ?
+            AND status = 'in_use'
+            LIMIT 1
+        ");
+        $update_computer->bind_param("ss", $reservation['lab_room'], $reservation['pc_number']);
+        
+        // Decrease session count
+        $new_session = $current_session - 1;
+        $update_session = $conn->prepare("UPDATE users SET SESSION = ? WHERE ID_NUMBER = ?");
+        $update_session->bind_param("is", $new_session, $student_id);
+        
+        if ($stmt->execute() && $update_computer->execute() && $update_session->execute()) {
+            $conn->commit();
+            $_SESSION['success'] = "Timeout recorded successfully. Student has {$new_session} sessions remaining.";
+        } else {
+            throw new Exception("Failed to record timeout");
+        }
+    } catch (Exception $e) {
+        $conn->rollback();
+        $_SESSION['error'] = "Error: " . $e->getMessage();
+    }
+    
+    header("Location: sit-in.php");
+    exit();
+}
+
+// Process direct sit-in
+if (isset($_POST['start_sitin'])) {
+    $student_id = $_POST['student_id'];
+    $lab_room = $_POST['lab_room'];
+    $purpose = $_POST['purpose'];
+    
+    // Check if student has active sit-in
+    $check_stmt = $conn->prepare("SELECT id FROM sit_in_sessions WHERE student_id = ? AND status = 'active'");
+    $check_stmt->bind_param("s", $student_id);
+    $check_stmt->execute();
+    $result = $check_stmt->get_result();
+    $has_active_sitin = $result->num_rows > 0;
+    
+    // Check if student has active reservation
+    $check_res_stmt = $conn->prepare("
+        SELECT COUNT(*) as count 
+        FROM reservations 
+        WHERE student_id = ? 
+        AND status = 'approved' 
+        AND reservation_date = CURRENT_DATE
+        AND time_in <= CURRENT_TIME 
+        AND time_out >= CURRENT_TIME
+    ");
+    $check_res_stmt->bind_param("i", $student_id);
+    $check_res_stmt->execute();
+    $has_active_reservation = $check_res_stmt->get_result()->fetch_assoc()['count'] > 0;
+    
+    if ($has_active_sitin) {
+        $_SESSION['error'] = "You already have an active sit-in session.";
+    } 
+    elseif ($has_active_reservation) {
+        $_SESSION['error'] = "You have an approved reservation for this time. Please use that instead.";
+    }
+    else {
+        $stmt = $conn->prepare("INSERT INTO sit_in_sessions (student_id, reservation_id, lab_room, purpose, status) VALUES (?, NULL, ?, ?, 'active')");
+        $stmt->bind_param("iss", $student_id, $lab_room, $purpose);
+        if ($stmt->execute()) {
+            $_SESSION['success'] = "Direct sit-in session started successfully.";
+        } else {
+            $_SESSION['error'] = "Failed to start sit-in session.";
+        }
+    }
+    
+    header("Location: sit-in.php");
+    exit();
+}
+
+// After processing all form submissions, fetch the latest data
+// Fetch direct sit-in sessions
+$direct_sessions_query = "
     SELECT 
         s.id as sit_id,
         s.student_id,
@@ -19,7 +224,13 @@ $direct_sessions = $conn->query("
     JOIN users u ON s.student_id = u.ID_NUMBER
     WHERE s.status = 'active' 
     ORDER BY s.start_time DESC
-");
+";
+
+$direct_sessions = $conn->query($direct_sessions_query);
+
+if (!$direct_sessions) {
+    $_SESSION['error'] = "Database error: " . $conn->error;
+}
 
 // Get current time and date
 $current_date = date('Y-m-d');
@@ -48,36 +259,7 @@ $reservation_sessions = $conn->query("
     ORDER BY r.time_in ASC
 ");
 
-if (isset($_POST['end_session'])) {
-    $session_id = $_POST['session_id'];
-    $student_id = $_POST['student_id'];
-    $end_time = date('Y-m-d H:i:s');
-    
-    // Get current session count before updating
-    $session_query = $conn->prepare("SELECT SESSION FROM users WHERE ID_NUMBER = ?");
-    $session_query->bind_param("s", $student_id);
-    $session_query->execute();
-    $current_session = $session_query->get_result()->fetch_assoc()['SESSION'];
-    
-    // Update sit-in session status
-    $stmt = $conn->prepare("UPDATE sit_in_sessions SET status = 'completed', end_time = ? WHERE id = ?");
-    $stmt->bind_param("si", $end_time, $session_id);
-    
-    if ($stmt->execute()) {
-        // Decrease session count
-        $new_session = $current_session - 1;
-        $update_session = $conn->prepare("UPDATE users SET SESSION = ? WHERE ID_NUMBER = ?");
-        $update_session->bind_param("is", $new_session, $student_id);
-        $update_session->execute();
-        
-        echo "<script>
-            alert('Session ended successfully! Student has " . $new_session . " sessions remaining.');
-            window.location.href = 'sit-in.php';
-        </script>";
-    }
-    $stmt->close();
-    exit();
-}
+// The end_session handler at the top of the file takes care of this functionality
 
 // Handle reservation timeout with end time tracking
 if (isset($_POST['end_reservation'])) {
@@ -89,27 +271,55 @@ if (isset($_POST['end_reservation'])) {
     $conn->begin_transaction();
     
     try {
-        // First get current session count
+        // First get current session count and verify student
         $session_query = $conn->prepare("SELECT SESSION FROM users WHERE ID_NUMBER = ?");
         $session_query->bind_param("s", $student_id);
         $session_query->execute();
-        $current_session = $session_query->get_result()->fetch_assoc()['SESSION'];
+        $session_result = $session_query->get_result();
         
-        // Get reservation details to update computer status
-        $get_reservation = $conn->prepare("SELECT lab_room, pc_number FROM reservations WHERE id = ?");
-        $get_reservation->bind_param("i", $reservation_id);
+        if ($session_result->num_rows === 0) {
+            throw new Exception("Student not found");
+        }
+        
+        $current_session = $session_result->fetch_assoc()['SESSION'];
+        
+        // Get reservation details and verify ownership
+        $get_reservation = $conn->prepare("
+            SELECT lab_room, pc_number 
+            FROM reservations 
+            WHERE id = ? 
+            AND student_id = ? 
+            AND status = 'approved'
+            AND timeout_at IS NULL
+        ");
+        $get_reservation->bind_param("is", $reservation_id, $student_id);
         $get_reservation->execute();
         $reservation = $get_reservation->get_result()->fetch_assoc();
         
-        // Record timeout
-        $stmt = $conn->prepare("UPDATE reservations SET timeout_at = ? WHERE id = ? AND status = 'approved'");
-        $stmt->bind_param("si", $now, $reservation_id);
+        if (!$reservation) {
+            throw new Exception("Reservation not found or already timed out");
+        }
         
-        // Update computer status to available
+        // Record timeout for specific reservation only
+        $stmt = $conn->prepare("
+            UPDATE reservations 
+            SET timeout_at = ? 
+            WHERE id = ? 
+            AND student_id = ?
+            AND status = 'approved' 
+            AND timeout_at IS NULL
+            LIMIT 1
+        ");
+        $stmt->bind_param("sis", $now, $reservation_id, $student_id);
+        
+        // Update computer status to available for specific computer only
         $update_computer = $conn->prepare("
             UPDATE computers 
             SET status = 'available' 
-            WHERE lab_room_id = ? AND pc_number = ?
+            WHERE lab_room_id = ? 
+            AND pc_number = ?
+            AND status = 'in_use'
+            LIMIT 1
         ");
         $update_computer->bind_param("ss", $reservation['lab_room'], $reservation['pc_number']);
         
@@ -190,14 +400,32 @@ if (isset($_POST['start_sitin'])) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Active Sit-in Sessions</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <title>Active Sit-in Sessions</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="bg-gray-100">
     <?php include 'admin-nav.php'; ?>
 
     <div class="max-w-7xl mx-auto p-6">
+        <?php if(isset($_SESSION['success'])): ?>
+            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+                <?php 
+                    echo $_SESSION['success']; 
+                    unset($_SESSION['success']); 
+                ?>
+            </div>
+        <?php endif; ?>
+        
+        <?php if(isset($_SESSION['error'])): ?>
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                <?php 
+                    echo $_SESSION['error']; 
+                    unset($_SESSION['error']); 
+                ?>
+            </div>
+        <?php endif; ?>
         <!-- Tab Navigation -->
         <div class="mb-4 border-b border-gray-200">
             <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" role="tablist">
@@ -258,13 +486,13 @@ if (isset($_POST['start_sitin'])) {
                                             <td class="border px-4 py-2">
                                                 <?php echo date('h:i A', strtotime($session['start_time'])); ?>
                                             </td>
-                                            <td class="border px-4 py-2"><?php echo htmlspecialchars($session['SESSION']); ?></td>
-                                            <td class="border px-4 py-2">
-                                                <form method="POST" action="end_session.php" class="inline text-center">
+                                            <td class="border px-4 py-2"><?php echo htmlspecialchars($session['SESSION']); ?></td>                                            <td class="border px-4 py-2">                                                <form method="POST" action="sit-in.php" class="inline text-center">
                                                     <input type="hidden" name="session_id" value="<?php echo $session['sit_id']; ?>">
                                                     <input type="hidden" name="student_id" value="<?php echo $session['ID_NUMBER']; ?>">
+                                                    <input type="hidden" name="current_tab" value="direct">
                                                     <button type="submit" name="end_session" 
-                                                            class="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700">
+                                                            class="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700"
+                                                            onclick="localStorage.setItem('activeTab', 'direct');">
                                                         Time Out
                                                     </button>
                                                 </form>
@@ -327,7 +555,7 @@ if (isset($_POST['start_sitin'])) {
                                                         <input type="hidden" name="student_id" value="<?php echo $reservation['ID_NUMBER']; ?>">
                                                         <button type="submit" name="end_reservation" 
                                                                 class="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700">
-                                                            Record Timeout
+                                                            Timeout
                                                         </button>
                                                     </form>
                                                 <?php else: ?>
@@ -349,34 +577,51 @@ if (isset($_POST['start_sitin'])) {
                 </div>
             </div>
         </div>
-    </div>
-
-    <script>
+    </div>    <script>
         // Tab functionality
         document.addEventListener('DOMContentLoaded', function() {
             const tabs = document.querySelectorAll('[role="tab"]');
             const tabPanels = document.querySelectorAll('[role="tabpanel"]');
-
+            
+            // Check if there's a saved tab in localStorage
+            const savedTab = localStorage.getItem('activeTab') || 'direct';
+            
+            // Activate the saved tab or default to first tab
+            activateTab(savedTab);
+            
             tabs.forEach(tab => {
                 tab.addEventListener('click', function() {
-                    // Reset all tabs and panels
-                    tabs.forEach(t => {
-                        t.classList.remove('border-blue-600', 'text-blue-600');
-                        t.classList.add('border-transparent');
-                        t.setAttribute('aria-selected', 'false');
-                    });
-                    tabPanels.forEach(p => p.classList.add('hidden'));
-
-                    // Activate clicked tab
-                    this.classList.remove('border-transparent');
-                    this.classList.add('border-blue-600', 'text-blue-600');
-                    this.setAttribute('aria-selected', 'true');
-
-                    // Show corresponding panel
-                    const panelId = this.getAttribute('data-tabs-target').substring(1);
-                    document.getElementById(panelId).classList.remove('hidden');
+                    const targetId = this.getAttribute('data-tabs-target').substring(1);
+                    activateTab(targetId);
+                    
+                    // Save the current tab to localStorage
+                    localStorage.setItem('activeTab', targetId);
                 });
             });
+            
+            function activateTab(tabId) {
+                // Reset all tabs and panels
+                tabs.forEach(t => {
+                    t.classList.remove('border-blue-600', 'text-blue-600');
+                    t.classList.add('border-transparent');
+                    t.setAttribute('aria-selected', 'false');
+                });
+                tabPanels.forEach(p => p.classList.add('hidden'));
+                
+                // Activate target tab
+                const targetTab = document.querySelector(`[data-tabs-target="#${tabId}"]`);
+                if (targetTab) {
+                    targetTab.classList.remove('border-transparent');
+                    targetTab.classList.add('border-blue-600', 'text-blue-600');
+                    targetTab.setAttribute('aria-selected', 'true');
+                }
+                
+                // Show target panel
+                const panel = document.getElementById(tabId);
+                if (panel) {
+                    panel.classList.remove('hidden');
+                }
+            }
         });
     </script>
 </body>

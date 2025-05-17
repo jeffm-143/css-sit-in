@@ -129,7 +129,7 @@ if (isset($_POST['delete_announcement'])) {
 // Fetch existing announcements
 $announcements = $conn->query("SELECT id, admin_username, content, date_posted FROM announcements ORDER BY date_posted DESC");
 
-$conn->close();
+//$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -187,115 +187,7 @@ $conn->close();
         }
     </script>
 
-    <!-- Navigation Bar -->
-    <nav class="bg-blue-900 py-4 px-6 shadow-md">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <a href="admin-dashboard.php" class="text-white text-2xl font-bold">CCS Admin</a>            <!-- Desktop Navigation -->
-            <div class="hidden md:flex items-center space-x-6">
-                <ul class="flex space-x-6 text-white font-medium">
-                    <li><a href="admin-dashboard.php" class="hover:text-yellow-400 transition">Home</a></li>
-                    <li><a href="search.php" class="hover:text-yellow-400 transition">Search</a></li>
-                    <li><a href="students.php" class="hover:text-yellow-400 transition">Students</a></li>
-                    <li><a href="sit-in.php" class="hover:text-yellow-400 transition">Sit-in</a></li>
-                    <li><a href="view-sit-in.php" class="hover:text-yellow-400 transition">View Sit-in</a></li>
-                    <li><a href="sit-in-reports.php" class="hover:text-yellow-400 transition">Sit-in Reports</a></li>
-                    <li><a href="feedback-reports.php" class="hover:text-yellow-400 transition">Feedback</a></li>
-                    <li><a href="reservation-admin.php" class="hover:text-yellow-400 transition">Reservation</a></li>
-                </ul>
->
-                <!-- Admin Tools Dropdown Menu -->
-                <div class="relative">
-                    <!-- Primary Button with Gradient -->
-                    <button id="dashboardOptionsBtn" type="button" class="flex items-center justify-center rounded-md bg-gradient-to-r from-blue-600 to-blue-800 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:from-blue-700 hover:to-blue-900 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                        <i class="fas fa-tools mr-2 text-blue-200"></i>
-                        <span>Admin Tools</span>
-                        <svg class="w-4 h-4 ml-2 transition-transform duration-200" id="dropdownArrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    
-                    <!-- Enhanced Dropdown Panel -->
-                    <div id="dashboardOptionsMenu" class="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 hidden z-10 transform origin-top-right transition-all duration-200 ease-out opacity-0 scale-95">
-                        <div class="py-1.5 divide-y divide-gray-100 dark:divide-gray-700">
-                            <!-- Menu Item 1 -->
-                            <div>
-                                <a href="admin-resources.php" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/30">
-                                    <i class="fas fa-book-reader mr-3 text-blue-600 dark:text-blue-400 w-5 text-center"></i>
-                                    <span>Manage Resources</span>
-                                </a>
-                            </div>
-                            
-                            <!-- Menu Item 2 -->
-                            <div>
-                                <a href="admin-points.php" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/30">
-                                    <i class="fas fa-chart-bar mr-3 text-blue-600 dark:text-blue-400 w-5 text-center"></i>
-                                    <span>Usage Analytics</span>
-                                </a>
-                            </div>
-                            
-                            <!-- Menu Item 3 -->
-                            <div>
-                                <a href="admin-labsched.php" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/30">
-                                    <i class="fas fa-calendar-alt mr-3 text-blue-600 dark:text-blue-400 w-5 text-center"></i>
-                                    <span>Lab Scheduling</span>
-                                </a>
-                            </div>
-                            
-                            <!-- Menu Item 4 -->
-                            <div>
-                                <a href="admin-leaderboards.php" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/30">
-                                    <i class="fas fa-trophy mr-3 text-blue-600 dark:text-blue-400 w-5 text-center"></i>
-                                    <span>Performance Rankings</span>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Add this script at the end of your file before </body> -->
-                <script>
-                    document.addEventListener('DOMContentLoaded', function() {
-                        const dropdownBtn = document.getElementById('dashboardOptionsBtn');
-                        const dropdownMenu = document.getElementById('dashboardOptionsMenu');
-                        const dropdownArrow = document.getElementById('dropdownArrow');
-                        
-                        dropdownBtn.addEventListener('click', function() {
-                            const expanded = dropdownMenu.classList.contains('hidden');
-                            
-                            if (expanded) {
-                                // Show menu
-                                dropdownMenu.classList.remove('hidden', 'opacity-0', 'scale-95');
-                                dropdownMenu.classList.add('opacity-100', 'scale-100');
-                                dropdownArrow.classList.add('rotate-180');
-                            } else {
-                                // Hide menu
-                                dropdownMenu.classList.add('opacity-0', 'scale-95');
-                                dropdownArrow.classList.remove('rotate-180');
-                                
-                                // Wait for animation to complete before hiding
-                                setTimeout(() => {
-                                    dropdownMenu.classList.add('hidden');
-                                }, 200);
-                            }
-                        });
-                        
-                        // Close dropdown when clicking outside
-                        document.addEventListener('click', function(event) {
-                            if (!dropdownBtn.contains(event.target) && !dropdownMenu.contains(event.target)) {
-                                dropdownMenu.classList.add('hidden', 'opacity-0', 'scale-95');
-                                dropdownArrow.classList.remove('rotate-180');
-                            }
-                        });
-                    });
-                </script>
-            </div>
-
-            <!-- Log Out Button -->
-            <a href="logout.php" class="bg-yellow-400 text-blue-900 px-4 py-2 rounded-lg font-bold hover:bg-blue-700 hover:text-white transition">
-                Log out
-            </a>
-        </div>
-    </nav>
+    <?php include 'admin-nav.php'; ?>
 
     <!-- Dashboard Content -->
     <div class="max-w-7xl mx-auto p-8">
@@ -592,6 +484,68 @@ $conn->close();
                 }
             }
         });
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const notificationButton = document.getElementById('notificationButton');
+            const notificationDropdown = document.getElementById('notificationDropdown');
+            
+            if (notificationButton && notificationDropdown) {
+                notificationButton.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    notificationDropdown.classList.toggle('hidden');
+                });
+                
+                document.addEventListener('click', function(e) {
+                    if (!notificationDropdown.contains(e.target) && e.target !== notificationButton) {
+                        notificationDropdown.classList.add('hidden');
+                    }
+                });
+            }
+        });
+
+        function markNotificationAsRead(notificationId, button) {
+            fetch('admin_dismiss_notification.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    notification_id: notificationId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the UI - fade out and remove notification
+                    const notifItem = button.closest('div.p-4.border-b');
+                    notifItem.style.opacity = '0';
+                    setTimeout(() => {
+                        notifItem.remove();
+                        
+                        // Check if no notifications left
+                        const notificationList = document.getElementById('notificationList');
+                        const remainingItems = notificationList.querySelectorAll('div.p-4.border-b');
+                        if (remainingItems.length === 0) {
+                            notificationList.innerHTML = '<div class="p-4 text-center text-gray-500">No pending reservations</div>';
+                        }
+
+                        // Update notification counter
+                        const counter = document.getElementById('notificationCount');
+                        if (counter) {
+                            const currentCount = parseInt(counter.textContent);
+                            if (currentCount > 1) {
+                                counter.textContent = currentCount - 1;
+                            } else {
+                                counter.remove();
+                            }
+                        }
+                    }, 300);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
     </script>
 
 </body>

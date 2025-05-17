@@ -123,7 +123,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['lab_room'])) {
             if ($insert_stmt->execute()) {
                 $_SESSION['success_message'] = "Reservation submitted successfully!";
             } else {
-                $_SESSION['error_message'] = "Error creating reservation: " . $insert_stmt->error;
+                error_log("Reservation insert error: " . $insert_stmt->error);
+                $_SESSION['error_message'] = "Failed to create reservation. Please try again later.";
             }
             $insert_stmt->close();
         } catch (Exception $e) {
@@ -176,11 +177,10 @@ try {
     $message = "Error fetching reservations: " . $e->getMessage();
 }
 
-// Add message display section at the top of the page content
+// Store success message for modal
+$successMessage = '';
 if (isset($_SESSION['success_message'])) {
-    echo '<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
-            <span class="block sm:inline">' . htmlspecialchars($_SESSION['success_message']) . '</span>
-          </div>';
+    $successMessage = $_SESSION['success_message'];
     unset($_SESSION['success_message']);
 }
 
@@ -200,18 +200,44 @@ if ($rooms_result) {
 }
 
 // Define purposes
-$purposes = ['C', 'C#', 'Python', 'PHP', 'Java', 'ASP.Net'];
+$purposes = [
+    'C', 
+    'C#', 
+    'Python', 
+    'PHP', 
+    'Java', 
+    'ASP.Net',
+    'Database',
+    'Digital Logic & Design',
+    'Embedded Systems & Iot',
+    'System Integration & Architecture',
+    'Computer Application',
+    'Web Design & Development'
+];
 
-// Add function to check if lab is open
+/**
+ * Check if the lab is open for a given date and time.
+ * @param string $date Format: Y-m-d
+ * @param string $time Format: H:i (24-hour)
+ * @return bool
+ */
 function isLabOpen($date, $time) {
-    $dayOfWeek = date('w', strtotime($date));
-    $time = date('H:i', strtotime($time));
-    
-    if ($dayOfWeek == 0) return false; // Sunday
-    if ($dayOfWeek == 6) { // Saturday
-        return $time >= '08:00' && $time <= '17:00';
+    // Prevent reservations on Sundays
+    if (empty($date) || empty($time)) {
+        return false;
     }
-    return $time >= '07:00' && $time <= '20:00';
+    $dayOfWeek = (int)date('w', strtotime($date)); // 0=Sunday, 1=Monday, ..., 6=Saturday
+    $formattedTime = date('H:i', strtotime($time));
+
+    if ($dayOfWeek === 0) {
+        // Sunday: lab is closed
+        return false;
+    }
+    if ($dayOfWeek === 6) { // Saturday
+        return ($formattedTime >= '08:00' && $formattedTime <= '17:00');
+    }
+    // Monday to Friday
+    return ($formattedTime >= '07:00' && $formattedTime <= '20:00');
 }
 
 // Get available computers for a specific lab
@@ -219,6 +245,19 @@ if (isset($_GET['get_computers'])) {
     $lab_room = $_GET['lab_room'];
     $date = $_GET['date'];
     $time = $_GET['time'];
+    
+    // First check if the computers have been properly set up for this lab room
+    $check_computers = $conn->prepare("SELECT COUNT(*) as count FROM computers WHERE lab_room_id = ?");
+    $check_computers->bind_param("s", $lab_room);
+    $check_computers->execute();
+    $count = $check_computers->get_result()->fetch_assoc()['count'];
+    
+    if ($count === 0) {
+        // No computers found for this lab room
+        header('Content-Type: application/json');
+        echo json_encode(['error' => "No computers found for Lab Room {$lab_room}. Please contact administrator."]);
+        exit;
+    }
     
     $stmt = $conn->prepare("
         SELECT c.*, 
@@ -325,16 +364,74 @@ $reservations = $conn->query("
     <header class="bg-gradient-to-r from-blue-800 to-indigo-800 shadow-lg">
         <div class="container mx-auto px-4">
             <nav class="flex items-center justify-between h-16">
-                <div class="flex items-center">
-                    <h2 class="text-2xl font-bold text-white">Laboratory Reservations</h2>
-                </div>
+                <h2 class="text-2xl font-bold text-white">Dashboard</h2>
                 <div class="flex items-center space-x-8">
-                    <ul class="flex space-x-6">
-                        <li><a href="#" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-bell mr-1"></i>Notification</a></li>
-                        <li><a href="dashboard.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-home mr-1"></i>Home</a></li>
+                    <ul class="flex items-center space-x-6">
+                        <!-- Notification Bell -->
+                        <li class="relative">
+                            <button id="notificationButton" class="text-white hover:text-yellow-400 transition-colors">
+                                <i class="fas fa-bell text-xl"></i>
+                                <?php
+                                $notif_count = $conn->prepare("SELECT COUNT(*) as count FROM notifications WHERE ID_NUMBER = ? AND is_read = 0");
+                                $notif_count->bind_param("i", $student_id);
+                                $notif_count->execute();
+                                $count = $notif_count->get_result()->fetch_assoc()['count'];
+                                if ($count > 0):
+                                ?>
+                                <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" id="notificationCount">
+                                    <?php echo $count; ?>
+                                </span>
+                                <?php endif; ?>
+                            </button>
+                            <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50">
+                                <div class="p-4 border-b border-gray-200">
+                                    <h3 class="text-lg font-semibold text-gray-800">Notifications</h3>
+                                </div>
+                                <div class="max-h-96 overflow-y-auto" id="notificationList">
+                                    <?php                                    $notifications_query = $conn->prepare("
+                                        SELECT * FROM notifications 
+                                        WHERE ID_NUMBER = ? AND is_read = 0 
+                                        ORDER BY created_at DESC LIMIT 5
+                                    ");
+                                    $notifications_query->bind_param("i", $student_id);
+                                    $notifications_query->execute();
+                                    $notifications = $notifications_query->get_result();
+                                    
+                                    if ($notifications->num_rows > 0):
+                                        while($notif = $notifications->fetch_assoc()):
+                                    ?>                                        <div class="notification-item p-4 border-b border-gray-100 hover:bg-gray-50 <?php echo $notif['is_read'] ? 'opacity-50' : ''; ?>"
+                                             data-notification-id="<?php echo $notif['id']; ?>" 
+                                             style="transition: opacity 0.3s ease-out;">
+                                            <div class="flex justify-between">
+                                                <div>
+                                                    <p class="text-sm text-gray-800"><?php echo htmlspecialchars($notif['message']); ?></p>
+                                                    <p class="text-xs text-gray-500 mt-1"><?php echo date('M d, Y h:i A', strtotime($notif['created_at'])); ?></p>
+                                                </div>
+                                                <?php if (!$notif['is_read']): ?>
+                                                <button onclick="markAsRead(<?php echo $notif['id']; ?>, this)" 
+                                                        class="text-xs text-blue-600 hover:text-blue-800 ml-2">
+                                                    Mark as read
+                                                </button>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    <?php 
+                                        endwhile;
+                                    else:
+                                    ?>
+                                        <div class="p-4 text-center text-gray-500">
+                                            No notifications
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </li>
+                        <li><a href="dashboard.php" class="text-yellow-400 font-bold transition-colors"><i class="fas fa-home mr-1"></i>Home</a></li>
                         <li><a href="edit_profile.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-user-edit mr-1"></i>Edit Profile</a></li>
                         <li><a href="history.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-history mr-1"></i>History</a></li>
-                        <li><a href="reservation.php" class="text-yellow-400 font-bold hover:text-yellow-400 transition-colors"><i class="fas fa-calendar-alt mr-1"></i>Reservation</a></li>
+                        <li><a href="user_labsched.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-clock mr-1"></i>Lab Schedule</a></li>
+                        <li><a href="user_resources.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-book mr-1"></i>Lab Resources</a></li>
+                        <li><a href="reservation.php" class="text-white/80 hover:text-yellow-400 transition-colors"><i class="fas fa-calendar-alt mr-1"></i>Reservation</a></li>
                     </ul>
                     <a href="logout.php" class="bg-yellow-400 text-indigo-900 px-6 py-2 rounded-lg font-bold hover:bg-yellow-500 transition duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
                         <i class="fas fa-sign-out-alt mr-1"></i>Log out
@@ -524,41 +621,43 @@ $reservations = $conn->query("
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
                                     <?php foreach ($reservations as $reservation): ?>
-                                    <tr class="hover:bg-gray-50 transition-colors duration-200">
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($reservation['lab_room']); ?></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($reservation['pc_number']); ?></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo date('M d, Y', strtotime($reservation['reservation_date'])); ?></td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            <?php 
-                                            if (!empty($reservation['time_in'])) {
-                                                echo date('h:i A', strtotime($reservation['time_in']));
-                                            } else {
-                                                echo 'Time not set';
-                                            }
-                                            ?>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($reservation['purpose']); ?></td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                                                <?php
-                                                switch($reservation['status']) {
-                                                    case 'approved':
-                                                        echo 'bg-green-100 text-green-800';
-                                                        break;
-                                                    case 'pending':
-                                                        echo 'bg-yellow-100 text-yellow-800';
-                                                        break;
-                                                    case 'rejected':
-                                                        echo 'bg-red-100 text-red-800';
-                                                        break;
-                                                    default:
-                                                        echo 'bg-gray-100 text-gray-800';
+                                        <?php if ($reservation['student_id'] == $student_id): ?>
+                                        <tr class="hover:bg-gray-50 transition-colors duration-200">
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($reservation['lab_room']); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($reservation['pc_number']); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo date('M d, Y', strtotime($reservation['reservation_date'])); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                <?php 
+                                                if (!empty($reservation['time_in'])) {
+                                                    echo date('h:i A', strtotime($reservation['time_in']));
+                                                } else {
+                                                    echo 'Time not set';
                                                 }
-                                                ?>">
-                                                <?php echo ucfirst(htmlspecialchars($reservation['status'])); ?>
-                                            </span>
-                                        </td>
-                                    </tr>
+                                                ?>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo htmlspecialchars($reservation['purpose']); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
+                                                    <?php
+                                                    switch($reservation['status']) {
+                                                        case 'approved':
+                                                            echo 'bg-green-100 text-green-800';
+                                                            break;
+                                                        case 'pending':
+                                                            echo 'bg-yellow-100 text-yellow-800';
+                                                            break;
+                                                        case 'rejected':
+                                                            echo 'bg-red-100 text-red-800';
+                                                            break;
+                                                        default:
+                                                            echo 'bg-gray-100 text-gray-800';
+                                                    }
+                                                    ?>">
+                                                    <?php echo ucfirst(htmlspecialchars($reservation['status'])); ?>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        <?php endif; ?>
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
@@ -590,6 +689,68 @@ $reservations = $conn->query("
             </div>
         </div>
     </div>
+
+    <!-- Notifications -->
+<script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const notificationButton = document.getElementById('notificationButton');
+            const notificationDropdown = document.getElementById('notificationDropdown');
+            
+            notificationButton.addEventListener('click', function(e) {
+                e.stopPropagation();
+                notificationDropdown.classList.toggle('hidden');
+            });
+            
+            document.addEventListener('click', function(e) {
+                if (!notificationDropdown.contains(e.target) && e.target !== notificationButton) {
+                    notificationDropdown.classList.add('hidden');
+                }
+            });
+        });        function markAsRead(notificationId, button) {
+            fetch('dismiss_notification.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    notification_id: notificationId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the UI - fade out and remove notification item completely
+                    const notifItem = button.closest('.notification-item');
+                    notifItem.style.opacity = '0';
+                    
+                    // Remove the notification after animation completes
+                    setTimeout(() => {
+                        // Actually remove the element from DOM
+                        notifItem.remove();
+                        
+                        // Check if no notifications left
+                        const notificationList = document.getElementById('notificationList');
+                        const remainingItems = notificationList.querySelectorAll('.notification-item');
+                        if (remainingItems.length === 0) {
+                            notificationList.innerHTML = '<div class="p-4 text-center text-gray-500">No notifications</div>';
+                        }
+                    }, 300);
+
+                    // Update the notification counter
+                    const counter = document.getElementById('notificationCount');
+                    if (counter) {
+                        const currentCount = parseInt(counter.textContent);
+                        if (currentCount > 1) {
+                            counter.textContent = currentCount - 1;
+                        } else {
+                            counter.remove();
+                        }
+                    }
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
 
     <script>
         tailwind.config = {
@@ -705,36 +866,41 @@ $reservations = $conn->query("
             element.classList.add('ring-2', 'ring-blue-500');
             document.getElementById('selectedPC').value = pcNumber;
             document.getElementById('submitBtn').disabled = false;
-        }
-
-        // Time validation function
+        }        // Time validation function
         function validateTime(time) {
             const selectedTime = new Date(`2000-01-01 ${time}`);
             const minTime = new Date(`2000-01-01 07:00`);
             const maxTime = new Date(`2000-01-01 20:00`);
             const selectedDate = document.getElementById('reservationDate').value;
-            const dayOfWeek = new Date(selectedDate).getDay();
-
-            // Sunday is closed
-            if (dayOfWeek === 0) {
-                alert('Lab is closed on Sundays');
-                return false;
-            }
-
-            // Saturday has different hours
-            if (dayOfWeek === 6) {
-                if (selectedTime < new Date(`2000-01-01 08:00`) || 
-                    selectedTime > new Date(`2000-01-01 17:00`)) {
-                    alert('Saturday hours are 8:00 AM to 5:00 PM');
+            
+            // Only check day of week if a date is actually selected
+            if (selectedDate) {
+                // Parse the date correctly: YYYY-MM-DD format
+                const [year, month, day] = selectedDate.split('-').map(Number);
+                const date = new Date(year, month - 1, day); // Month is 0-indexed in JavaScript
+                const dayOfWeek = date.getDay();
+                console.log("In validateTime - Selected date:", selectedDate, "Day of week:", dayOfWeek);
+                
+                // Sunday is closed
+                if (dayOfWeek === 0) {
+                    alert('Lab is closed on Sundays');
                     return false;
                 }
-            } else {
-                // Weekday validation
-                if (selectedTime < minTime || selectedTime > maxTime) {
-                    alert('Weekday hours are 7:00 AM to 8:00 PM');
-                    return false;
-                }
-            }
+
+                // Saturday has different hours
+                if (dayOfWeek === 6) {
+                    if (selectedTime < new Date(`2000-01-01 08:00`) || 
+                        selectedTime > new Date(`2000-01-01 17:00`)) {
+                        alert('Saturday hours are 8:00 AM to 5:00 PM');
+                        return false;
+                    }
+                } else {
+                    // Weekday validation
+                    if (selectedTime < minTime || selectedTime > maxTime) {
+                        alert('Weekday hours are 7:00 AM to 8:00 PM');
+                        return false;
+                    }
+                }            }
             return true;
         }
 
@@ -742,16 +908,21 @@ $reservations = $conn->query("
         document.getElementById('timeIn').addEventListener('change', function() {
             if (this.value && !validateTime(this.value)) {
                 this.value = '';
+            } else if (this.value) {
+                // If time is valid and we have all three required fields, load computers
+                loadComputers();
             }
-        });
-
-        // Date validation function
+        });        // Date validation function
         function validateDate(selectedDate) {
-            const date = new Date(selectedDate);
+            // Force proper date parsing with YYYY-MM-DD format
+            const [year, month, day] = selectedDate.split('-').map(Number);
+            const date = new Date(year, month - 1, day); // Month is 0-indexed in JavaScript
+            
+            // Get day of week (0 = Sunday, 1 = Monday, etc.)
             const dayOfWeek = date.getDay();
+            console.log("Selected date:", selectedDate, "Day of week:", dayOfWeek);
+            
             const today = new Date();
-
-            // Reset time part for proper date comparison
             today.setHours(0, 0, 0, 0);
             date.setHours(0, 0, 0, 0);
 
@@ -769,6 +940,22 @@ $reservations = $conn->query("
 
             return true;
         }
+        
+        // Add validation to date input
+        document.getElementById('reservationDate').addEventListener('change', function() {
+            if (this.value) {
+                if (!validateDate(this.value)) {
+                    this.value = '';
+                } else {
+                    // If we have lab room and time filled, load computers
+                    const labRoom = document.getElementById('labRoom').value;
+                    const time = document.getElementById('timeIn').value;
+                    if (labRoom && time) {
+                        loadComputers();
+                    }
+                }
+            }
+        });
 
         // Update form submission validation
         document.getElementById('reservationForm').addEventListener('submit', function(e) {
@@ -822,7 +1009,39 @@ $reservations = $conn->query("
             document.getElementById('reservationForm').submit();
         });
 
-        
+          </script>    <!-- Success Modal -->
+    <div id="successModal" class="<?php echo empty($successMessage) ? 'hidden' : ''; ?> fixed inset-0 bg-gray-800 bg-opacity-75 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-xl p-6 max-w-md w-full transform transition-all">
+            <div class="text-center">
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-6">
+                    <svg class="h-10 w-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl leading-6 font-bold text-gray-900 mb-2">Success!</h3>
+                <div class="mt-2 px-7 py-3">
+                    <p class="text-lg text-gray-600"><?php echo htmlspecialchars($successMessage); ?></p>
+                </div>
+                <div class="mt-5">
+                    <button id="closeSuccessModal" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-6 rounded-xl hover:from-blue-700 hover:to-blue-800 transition duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                        OK
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <?php if (!empty($successMessage)): ?>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const successModal = document.getElementById('successModal');
+            const closeBtn = document.getElementById('closeSuccessModal');
+            
+            closeBtn.addEventListener('click', function() {
+                successModal.classList.add('hidden');
+            });
+        });
     </script>
+    <?php endif; ?>
 </body>
 </html>
