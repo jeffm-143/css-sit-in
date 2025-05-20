@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 08, 2025 at 07:20 AM
+-- Generation Time: May 20, 2025 at 11:35 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -39,7 +39,8 @@ CREATE TABLE `announcements` (
 --
 
 INSERT INTO `announcements` (`id`, `admin_username`, `content`, `date_posted`) VALUES
-(1, 'admin', 'Sample', '2025-05-08 12:55:35');
+(1, 'admin', 'Sample', '2025-05-08 12:55:35'),
+(0, 'admin', 'hello', '2025-05-15 12:18:42');
 
 -- --------------------------------------------------------
 
@@ -400,7 +401,7 @@ INSERT INTO `computers` (`id`, `pc_number`, `lab_room_id`, `status`, `created_at
 (338, 'PC30', '542', 'available', '2025-05-08 19:05:35'),
 (339, 'PC40', '542', 'available', '2025-05-08 19:05:35'),
 (340, 'PC50', '542', 'available', '2025-05-08 19:05:35'),
-(341, 'PC10', '544', 'available', '2025-05-08 19:05:35'),
+(341, 'PC10', '544', 'in_use', '2025-05-08 19:05:35'),
 (342, 'PC20', '544', 'available', '2025-05-08 19:05:35'),
 (343, 'PC30', '544', 'available', '2025-05-08 19:05:35'),
 (344, 'PC40', '544', 'available', '2025-05-08 19:05:35'),
@@ -409,7 +410,8 @@ INSERT INTO `computers` (`id`, `pc_number`, `lab_room_id`, `status`, `created_at
 (347, 'PC20', '517', 'available', '2025-05-08 19:05:35'),
 (348, 'PC30', '517', 'available', '2025-05-08 19:05:35'),
 (349, 'PC40', '517', 'available', '2025-05-08 19:05:35'),
-(350, 'PC50', '517', 'available', '2025-05-08 19:05:35');
+(350, 'PC50', '517', 'available', '2025-05-08 19:05:35'),
+(0, 'PC01', '2', 'in_use', '2025-05-16 23:58:08');
 
 -- --------------------------------------------------------
 
@@ -465,6 +467,103 @@ INSERT INTO `lab_rooms` (`id`, `room_number`, `total_computers`, `status`, `crea
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `lab_schedules`
+--
+
+CREATE TABLE `lab_schedules` (
+  `schedule_id` int(11) NOT NULL,
+  `lab_room` varchar(10) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `schedule_image` varchar(255) NOT NULL,
+  `uploaded_by` varchar(100) NOT NULL,
+  `upload_date` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `lab_schedules`
+--
+
+INSERT INTO `lab_schedules` (`schedule_id`, `lab_room`, `title`, `description`, `schedule_image`, `uploaded_by`, `upload_date`) VALUES
+(1, 'LAB 524', '524', '524', '1747296446_OIP.jpg', 'admin', '2025-05-15 08:07:26'),
+(4, 'LAB 526', 'INFOSEC', '526', '1747452280_Screenshot 2025-05-16 145741.png', 'admin', '2025-05-17 03:24:40'),
+(5, 'LAB 528', 'INTPROG', '528', '1747452335_Screenshot 2025-05-16 145741.png', 'admin', '2025-05-17 03:25:35'),
+(6, 'LAB 530', 'SYSARC', '530', '1747452362_Screenshot 2025-05-16 145741.png', 'admin', '2025-05-17 03:26:02'),
+(7, 'LAB 528', 'INTPROG', 'Leader', '1747457384_schedule_1747453282365.jpg', 'admin', '2025-05-17 04:49:44');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `notifications`
+--
+
+CREATE TABLE `notifications` (
+  `id` int(11) NOT NULL,
+  `ID_NUMBER` int(11) NOT NULL,
+  `message` text NOT NULL,
+  `type` enum('reservation_approved','reservation_rejected','system') NOT NULL,
+  `is_read` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `notifications`
+--
+
+INSERT INTO `notifications` (`id`, `ID_NUMBER`, `message`, `type`, `is_read`, `created_at`) VALUES
+(1, 22683320, 'Your lab reservation has been approved!', 'reservation_approved', 1, '2025-05-17 05:11:21'),
+(2, 22683320, 'Your lab reservation has been approved!', 'reservation_approved', 1, '2025-05-17 05:20:55'),
+(3, 11111111, 'Your lab reservation has been approved!', 'reservation_approved', 1, '2025-05-17 05:21:11'),
+(4, 11111111, 'Your lab reservation has been approved!', 'reservation_approved', 1, '2025-05-17 05:36:47'),
+(5, 11111111, 'Your lab reservation has been approved!', 'reservation_approved', 1, '2025-05-17 05:41:38'),
+(6, 11111111, 'Your lab reservation has been approved!', 'reservation_approved', 1, '2025-05-17 05:51:11'),
+(7, 11111111, 'Your lab reservation has been approved!', 'reservation_approved', 1, '2025-05-17 05:53:42'),
+(8, 11111111, 'Your lab reservation has been approved!', 'reservation_approved', 1, '2025-05-17 06:47:15'),
+(9, 22683320, 'Your lab reservation has been approved!', 'reservation_approved', 1, '2025-05-17 07:06:52'),
+(10, 22683320, 'Your lab reservation has been approved!', 'reservation_approved', 1, '2025-05-17 07:08:14'),
+(11, 22683320, 'Your lab reservation has been approved!', 'reservation_approved', 1, '2025-05-17 07:12:11'),
+(12, 22683320, 'Your lab reservation has been approved!', 'reservation_approved', 1, '2025-05-17 07:14:53'),
+(13, 22683320, 'Your lab reservation has been approved!', 'reservation_approved', 1, '2025-05-17 07:26:28'),
+(14, 22683320, 'Your lab reservation has been approved!', 'reservation_approved', 0, '2025-05-17 07:32:40');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `points`
+--
+
+CREATE TABLE `points` (
+  `id` int(11) NOT NULL,
+  `student_id` int(11) NOT NULL,
+  `points_earned` int(11) NOT NULL,
+  `points_reason` text NOT NULL,
+  `awarded_by` varchar(50) NOT NULL,
+  `awarded_date` timestamp NOT NULL DEFAULT current_timestamp(),
+  `converted_to_session` tinyint(1) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `points`
+--
+
+INSERT INTO `points` (`id`, `student_id`, `points_earned`, `points_reason`, `awarded_by`, `awarded_date`, `converted_to_session`) VALUES
+(1, 1, 1, 'None', 'admin', '2025-05-15 07:39:56', 1),
+(2, 1, 2, 'nana', 'admin', '2025-05-15 07:40:08', 1),
+(3, 2, 3, 'NIce', 'admin', '2025-05-16 23:40:29', 0),
+(4, 1, 2, 'Nice\r\n', 'admin', '2025-05-16 23:41:02', 1),
+(5, 1, 1, 'Good', 'admin', '2025-05-16 23:41:40', 1),
+(6, 6, 2, 'Nice', 'admin', '2025-05-16 23:42:04', 0),
+(7, 3, 1, 'Good', 'admin', '2025-05-16 23:42:18', 0),
+(8, 2, 1, 'Good', 'admin', '2025-05-16 23:42:32', 0),
+(9, 1, 3, 'But-an', 'admin', '2025-05-17 03:39:29', 1),
+(10, 6, 1, 'Nice', 'admin', '2025-05-17 03:39:46', 0),
+(11, 3, 1, 'Nice', 'admin', '2025-05-17 03:39:55', 0),
+(12, 4, 1, 'Good', 'admin', '2025-05-17 03:40:08', 0),
+(13, 1, 3, 'nice', 'admin', '2025-05-17 05:47:59', 1);
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `reservations`
 --
 
@@ -489,7 +588,83 @@ CREATE TABLE `reservations` (
 INSERT INTO `reservations` (`id`, `student_id`, `lab_room`, `pc_number`, `purpose`, `reservation_date`, `time_in`, `status`, `timeout_at`, `created_at`, `updated_at`) VALUES
 (2, 26683320, '524', 'PC01', 'C', '2025-05-15', '10:30:00', 'approved', '2025-05-08 06:24:15', '2025-05-08 04:23:42', '2025-05-08 04:24:15'),
 (3, 26683320, '524', 'PC02', 'C', '2025-05-13', '10:30:00', 'approved', '2025-05-08 06:31:27', '2025-05-08 04:30:42', '2025-05-08 04:31:27'),
-(4, 26683320, '524', 'PC02', 'C', '2025-05-15', '10:30:00', 'approved', '2025-05-08 06:53:41', '2025-05-08 04:52:38', '2025-05-08 04:53:41');
+(4, 26683320, '524', 'PC02', 'C', '2025-05-15', '10:30:00', 'approved', '2025-05-08 06:53:41', '2025-05-08 04:52:38', '2025-05-08 04:53:41'),
+(0, 11111111, '526', 'PC01', 'Python', '2025-05-20', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-16 21:46:19', '2025-05-17 00:45:45'),
+(0, 11111111, '526', 'PC01', 'Python', '2025-05-20', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-16 21:58:29', '2025-05-17 00:45:45'),
+(0, 11111111, '530', 'PC01', 'PHP', '2025-05-21', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-16 22:04:06', '2025-05-17 00:45:45'),
+(0, 22683320, '530', 'PC02', 'C#', '2025-05-21', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-16 22:04:42', '2025-05-17 00:45:45'),
+(0, 22683320, '524', 'PC01', 'PHP', '2025-05-20', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-16 22:32:48', '2025-05-17 00:45:45'),
+(0, 22683320, '526', 'PC01', 'Python', '2025-05-23', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-16 22:51:01', '2025-05-17 00:45:45'),
+(0, 22683320, '530', 'PC01', 'C', '2025-05-22', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-16 23:00:46', '2025-05-17 00:45:45'),
+(0, 22683320, '524', 'PC01', 'C#', '2025-05-19', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-16 23:25:52', '2025-05-17 00:45:45'),
+(0, 22683320, '524', 'PC01', 'Web Design & Development', '2025-05-26', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-16 23:31:20', '2025-05-17 00:45:45'),
+(0, 33333333, '524', 'PC01', 'Computer Application', '2025-05-19', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-16 23:37:38', '2025-05-17 00:45:45'),
+(0, 33333333, '524', 'PC02', 'Web Design & Development', '2025-05-19', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-16 23:44:11', '2025-05-17 00:45:45'),
+(0, 33333333, '528', 'PC01', 'Digital Logic & Design', '2025-05-19', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-16 23:46:06', '2025-05-17 00:45:45'),
+(0, 22683320, '544', 'PC03', 'Computer Application', '2025-05-19', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-16 23:47:31', '2025-05-17 00:45:45'),
+(0, 22683320, '530', 'PC04', 'Computer Application', '2025-05-20', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-17 00:04:51', '2025-05-17 00:45:45'),
+(0, 11111111, '517', 'PC02', 'Database', '2025-05-20', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-17 00:13:04', '2025-05-17 00:45:45'),
+(0, 11111111, '517', 'PC05', 'ASP.Net', '2025-05-21', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-17 00:19:37', '2025-05-17 00:45:45'),
+(0, 22683320, '530', 'PC05', 'Java', '2025-05-21', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-17 00:20:07', '2025-05-17 00:45:45'),
+(0, 22683320, '524', 'PC06', 'C', '2025-05-20', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-17 00:24:41', '2025-05-17 00:45:45'),
+(0, 22683320, '530', 'PC06', 'Java', '2025-05-21', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-17 00:31:47', '2025-05-17 00:45:45'),
+(0, 11111111, '517', 'PC06', 'ASP.Net', '2025-05-19', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-17 00:36:27', '2025-05-17 00:45:45'),
+(0, 22683320, '544', 'PC10', 'Web Design & Development', '2025-05-23', '10:30:00', 'approved', '2025-05-17 02:45:45', '2025-05-17 00:41:22', '2025-05-17 00:45:45'),
+(0, 22683320, '542', 'PC01', 'Computer Application', '2025-05-19', '10:30:00', 'approved', '2025-05-17 02:52:12', '2025-05-17 00:46:15', '2025-05-17 00:52:12'),
+(0, 11111111, '542', 'PC02', 'Computer Application', '2025-05-20', '10:30:00', 'approved', '2025-05-17 02:52:08', '2025-05-17 00:46:42', '2025-05-17 00:52:08'),
+(0, 11111111, '530', 'PC10', 'Computer Application', '2025-05-27', '10:30:00', 'approved', '2025-05-17 02:57:20', '2025-05-17 00:55:22', '2025-05-17 00:57:20'),
+(0, 22683320, '526', 'PC10', 'Computer Application', '2025-05-19', '10:30:00', 'approved', '2025-05-17 02:57:22', '2025-05-17 00:55:46', '2025-05-17 00:57:22'),
+(0, 22683320, '524', 'PC06', 'Database', '2025-05-21', '10:33:00', 'approved', '2025-05-17 02:59:50', '2025-05-17 00:58:25', '2025-05-17 00:59:50'),
+(0, 11111111, '530', 'PC07', 'Python', '2025-05-21', '10:30:00', 'approved', '2025-05-17 02:59:41', '2025-05-17 00:59:03', '2025-05-17 00:59:41'),
+(0, 222222222, '524', 'PC01', 'Python', '2025-05-27', '10:30:00', 'approved', '2025-05-17 04:42:11', '2025-05-17 02:41:53', '2025-05-17 02:42:11'),
+(0, 222222222, '517', 'PC01', 'Digital Logic & Design', '2025-05-19', '10:30:00', 'approved', '2025-05-17 04:50:42', '2025-05-17 02:50:23', '2025-05-17 02:50:42'),
+(0, 222222222, '530', 'PC01', 'Digital Logic & Design', '2025-05-19', '10:30:00', 'approved', '2025-05-17 05:54:39', '2025-05-17 03:53:21', '2025-05-17 03:54:39'),
+(0, 222222222, '517', 'PC01', 'Database', '2025-05-19', '10:30:00', 'approved', '2025-05-17 05:56:40', '2025-05-17 03:55:39', '2025-05-17 03:56:40'),
+(0, 222222222, '517', 'PC01', 'C', '2025-05-19', '10:30:00', 'approved', '2025-05-17 05:58:22', '2025-05-17 03:58:01', '2025-05-17 03:58:22'),
+(0, 22683320, '524', 'PC03', 'Database', '2025-05-19', '10:30:00', 'approved', '2025-05-17 06:51:02', '2025-05-17 04:50:31', '2025-05-17 04:51:02'),
+(0, 22683320, '517', 'PC06', 'Computer Application', '2025-05-20', '10:30:00', 'approved', '2025-05-17 07:10:02', '2025-05-17 04:58:43', '2025-05-17 05:10:02'),
+(0, 22683320, '524', 'PC01', 'Computer Application', '2025-05-19', '10:30:00', 'approved', '2025-05-17 07:19:01', '2025-05-17 05:11:09', '2025-05-17 05:19:01'),
+(0, 22683320, '524', 'PC01', 'C#', '2025-05-19', '10:30:00', 'approved', '2025-05-17 07:29:19', '2025-05-17 05:19:25', '2025-05-17 05:29:19'),
+(0, 11111111, '517', 'PC01', 'Computer Application', '2025-05-19', '10:30:00', 'approved', '2025-05-17 07:29:18', '2025-05-17 05:20:27', '2025-05-17 05:29:18'),
+(0, 11111111, '524', 'PC01', 'C', '2025-05-19', '10:30:00', 'approved', '2025-05-17 07:38:20', '2025-05-17 05:29:37', '2025-05-17 05:38:20'),
+(0, 11111111, '524', 'PC01', 'Computer Application', '2025-05-19', '10:30:00', 'approved', '2025-05-17 07:47:01', '2025-05-17 05:41:22', '2025-05-17 05:47:01'),
+(0, 11111111, '524', 'PC05', 'Computer Application', '2025-05-20', '10:30:00', 'approved', '2025-05-17 07:53:09', '2025-05-17 05:50:57', '2025-05-17 05:53:09'),
+(0, 11111111, '524', 'PC01', 'Computer Application', '2025-05-19', '10:30:00', 'approved', '2025-05-17 08:41:00', '2025-05-17 05:53:27', '2025-05-17 06:41:00'),
+(0, 11111111, '517', 'PC01', 'Database', '2025-05-19', '10:30:00', 'approved', '2025-05-17 08:48:13', '2025-05-17 06:41:20', '2025-05-17 06:48:13'),
+(0, 22683320, '524', 'PC01', 'ASP.Net', '2025-05-19', '10:30:00', 'approved', '2025-05-17 09:06:57', '2025-05-17 06:52:13', '2025-05-17 07:06:57'),
+(0, 22683320, '524', 'PC01', 'Python', '2025-05-19', '10:30:00', 'approved', '2025-05-17 09:09:59', '2025-05-17 07:07:29', '2025-05-17 07:09:59'),
+(0, 22683320, '524', 'PC01', 'ASP.Net', '2025-05-19', '10:30:00', 'approved', '2025-05-17 09:12:25', '2025-05-17 07:10:49', '2025-05-17 07:12:25'),
+(0, 22683320, '517', 'PC01', 'Web Design & Development', '2025-05-19', '10:30:00', 'approved', '2025-05-17 09:15:01', '2025-05-17 07:13:00', '2025-05-17 07:15:01'),
+(0, 22683320, '524', 'PC01', 'Web Design & Development', '2025-05-19', '13:00:00', 'approved', '2025-05-17 09:26:46', '2025-05-17 07:26:13', '2025-05-17 07:26:46'),
+(0, 22683320, '517', 'PC01', 'Computer Application', '2025-05-19', '10:30:00', 'approved', '2025-05-17 09:33:02', '2025-05-17 07:32:31', '2025-05-17 07:33:02');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `resources`
+--
+
+CREATE TABLE `resources` (
+  `id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text NOT NULL,
+  `resource_type` enum('document','video','link') NOT NULL,
+  `file_path` varchar(255) DEFAULT NULL,
+  `link_url` varchar(255) DEFAULT NULL,
+  `year_level` enum('1st Year','2nd Year','3rd Year','4th Year') NOT NULL,
+  `course` varchar(50) NOT NULL,
+  `uploaded_by` varchar(50) NOT NULL,
+  `upload_date` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `resources`
+--
+
+INSERT INTO `resources` (`id`, `title`, `description`, `resource_type`, `file_path`, `link_url`, `year_level`, `course`, `uploaded_by`, `upload_date`) VALUES
+(2, 'IT', 'Knowledge', 'link', NULL, 'https://www.w3schools.com/java/default.asp', '1st Year', 'BSIT', 'admin', '2025-05-15 15:08:41'),
+(3, 'Java Syntax', 'W3school Java Syntax Practices', 'link', NULL, 'https://www.w3schools.com/java/java_syntax.asp', '1st Year', 'BSIT', 'admin', '2025-05-16 15:13:57'),
+(4, 'Python', 'Python Syntax', 'link', NULL, 'https://www.w3schools.com/python/python_syntax.asp', '1st Year', 'BSIT', 'admin', '2025-05-16 16:48:55');
 
 -- --------------------------------------------------------
 
@@ -500,6 +675,7 @@ INSERT INTO `reservations` (`id`, `student_id`, `lab_room`, `pc_number`, `purpos
 CREATE TABLE `sit_in_sessions` (
   `id` int(11) NOT NULL,
   `student_id` int(11) NOT NULL,
+  `reservation_id` int(11) DEFAULT NULL,
   `lab_room` varchar(50) NOT NULL,
   `purpose` varchar(100) NOT NULL,
   `start_time` datetime NOT NULL,
@@ -512,15 +688,39 @@ CREATE TABLE `sit_in_sessions` (
 -- Dumping data for table `sit_in_sessions`
 --
 
-INSERT INTO `sit_in_sessions` (`id`, `student_id`, `lab_room`, `purpose`, `start_time`, `end_time`, `status`, `created_at`) VALUES
-(1, 26683320, '524', 'C', '2025-05-08 16:41:41', '2025-05-08 16:42:33', 'completed', '2025-05-08 14:41:41'),
-(2, 11111111, '524', 'C', '2025-05-08 21:54:45', '2025-05-08 22:11:34', 'completed', '2025-05-08 19:54:45'),
-(3, 26683320, '530', 'C', '2025-05-08 21:59:39', '2025-05-08 22:11:34', 'completed', '2025-05-08 19:59:39'),
-(4, 26683320, '524', 'C', '2025-05-08 22:14:01', '2025-05-08 22:22:11', 'completed', '2025-05-08 20:14:01'),
-(5, 26683320, 'MAC', 'ASP.Net', '2025-05-08 22:23:02', '2025-05-08 22:29:59', 'completed', '2025-05-08 20:23:02'),
-(6, 26683320, 'MAC', 'C', '2025-05-08 22:33:11', '2025-05-08 22:45:38', 'completed', '2025-05-08 20:33:11'),
-(7, 26683320, '524', 'C', '2025-05-08 22:55:28', '2025-05-08 23:10:44', 'completed', '2025-05-08 20:55:28'),
-(8, 26683320, '547', 'C', '2025-05-08 23:13:37', '2025-05-08 23:28:11', 'completed', '2025-05-08 21:13:37');
+INSERT INTO `sit_in_sessions` (`id`, `student_id`, `reservation_id`, `lab_room`, `purpose`, `start_time`, `end_time`, `status`, `created_at`) VALUES
+(1, 26683320, NULL, '524', 'C', '2025-05-08 16:41:41', '2025-05-08 16:42:33', 'completed', '2025-05-08 14:41:41'),
+(2, 11111111, NULL, '524', 'C', '2025-05-08 21:54:45', '2025-05-08 22:11:34', 'completed', '2025-05-08 19:54:45'),
+(3, 26683320, NULL, '530', 'C', '2025-05-08 21:59:39', '2025-05-08 22:11:34', 'completed', '2025-05-08 19:59:39'),
+(4, 26683320, NULL, '524', 'C', '2025-05-08 22:14:01', '2025-05-08 22:22:11', 'completed', '2025-05-08 20:14:01'),
+(5, 26683320, NULL, 'MAC', 'ASP.Net', '2025-05-08 22:23:02', '2025-05-08 22:29:59', 'completed', '2025-05-08 20:23:02'),
+(6, 26683320, NULL, 'MAC', 'C', '2025-05-08 22:33:11', '2025-05-08 22:45:38', 'completed', '2025-05-08 20:33:11'),
+(7, 26683320, NULL, '524', 'C', '2025-05-08 22:55:28', '2025-05-08 23:10:44', 'completed', '2025-05-08 20:55:28'),
+(8, 26683320, NULL, '547', 'C', '2025-05-08 23:13:37', '2025-05-08 23:28:11', 'completed', '2025-05-08 21:13:37'),
+(0, 22683320, NULL, '530', 'PHP', '2025-05-15 09:39:29', '2025-05-17 02:52:15', 'completed', '2025-05-15 07:39:29'),
+(0, 22683320, NULL, '524', 'Java', '2025-05-16 23:45:14', '2025-05-17 02:52:15', 'completed', '2025-05-16 21:45:14'),
+(0, 222222222, NULL, '530', 'C#', '2025-05-16 23:47:22', '2025-05-17 02:52:15', 'completed', '2025-05-16 21:47:22'),
+(0, 22683320, NULL, '547', 'PHP', '2025-05-16 23:55:05', '2025-05-17 02:52:15', 'completed', '2025-05-16 21:55:05'),
+(0, 11111111, NULL, '530', 'PHP', '2025-05-16 23:55:23', '2025-05-17 02:52:15', 'completed', '2025-05-16 21:55:23'),
+(0, 22683320, NULL, '530', 'Python', '2025-05-16 23:57:18', '2025-05-17 02:52:15', 'completed', '2025-05-16 21:57:18'),
+(0, 222222222, NULL, '528', 'Python', '2025-05-16 23:59:27', '2025-05-17 02:52:15', 'completed', '2025-05-16 21:59:27'),
+(0, 33333333, NULL, '524', 'PHP', '2025-05-16 23:59:45', '2025-05-17 02:52:15', 'completed', '2025-05-16 21:59:45'),
+(0, 33333333, NULL, '526', 'Python', '2025-05-17 00:02:49', '2025-05-17 02:52:15', 'completed', '2025-05-16 22:02:49'),
+(0, 44444444, NULL, '524', 'Python', '2025-05-17 00:03:05', '2025-05-17 02:52:15', 'completed', '2025-05-16 22:03:05'),
+(0, 33333333, NULL, '524', 'C', '2025-05-17 00:06:16', '2025-05-17 02:52:15', 'completed', '2025-05-16 22:06:16'),
+(0, 55555555, NULL, '526', 'C', '2025-05-17 00:06:35', '2025-05-17 02:52:15', 'completed', '2025-05-16 22:06:35'),
+(0, 33333333, NULL, '526', 'Python', '2025-05-17 00:09:46', '2025-05-17 02:52:15', 'completed', '2025-05-16 22:09:46'),
+(0, 55555555, NULL, '524', 'Python', '2025-05-17 00:10:05', '2025-05-17 02:52:15', 'completed', '2025-05-16 22:10:05'),
+(0, 33333333, NULL, '524', 'PHP', '2025-05-17 00:15:33', '2025-05-17 02:52:15', 'completed', '2025-05-16 22:15:33'),
+(0, 222222222, NULL, '526', 'PHP', '2025-05-17 00:15:48', '2025-05-17 02:52:15', 'completed', '2025-05-16 22:15:48'),
+(0, 44444444, NULL, '528', 'Database', '2025-05-17 02:50:03', '2025-05-17 02:52:15', 'completed', '2025-05-17 00:50:03'),
+(0, 222222222, NULL, '530', 'Computer Application', '2025-05-17 02:50:48', '2025-05-17 02:52:15', 'completed', '2025-05-17 00:50:48'),
+(0, 44444444, NULL, '526', 'Computer Application', '2025-05-17 02:53:44', '2025-05-17 02:53:58', 'completed', '2025-05-17 00:53:44'),
+(0, 55555555, NULL, '526', 'System Integration & Architecture', '2025-05-17 02:53:56', '2025-05-17 02:54:00', 'completed', '2025-05-17 00:53:56'),
+(0, 44444444, NULL, '526', 'Computer Application', '2025-05-17 04:39:39', '2025-05-17 04:39:44', 'completed', '2025-05-17 02:39:39'),
+(0, 44444444, NULL, '524', 'C', '2025-05-17 04:40:32', '2025-05-17 04:40:34', 'completed', '2025-05-17 02:40:32'),
+(0, 55555555, NULL, '524', 'Database', '2025-05-17 06:07:33', '2025-05-17 06:11:43', 'completed', '2025-05-17 04:07:33'),
+(0, 33333333, NULL, '524', 'Digital Logic & Design', '2025-05-17 06:09:11', '2025-05-17 06:09:18', 'completed', '2025-05-17 04:09:11');
 
 -- --------------------------------------------------------
 
@@ -555,187 +755,106 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`ID`, `ID_NUMBER`, `LASTNAME`, `FIRSTNAME`, `MIDDLENAME`, `COURSE`, `YEAR`, `USERNAME`, `PASSWORD`, `EMAIL`, `ADDRESS`, `SESSION`, `IMAGE`, `CREATED_AT`, `user_type`, `POINTS`, `current_points`, `total_points_earned`, `sessions_earned`) VALUES
-(1, 26683320, 'Monreal', 'Jeff', 'Ranido', 'BSIT', 3, 'j123', '$2y$10$lAJIYBRLFRVoUVjDHIX58.1ijRyVeJtJBZ9gLENVIkr.v26ZMjIdi', 'j123@gmail.com', 'jeff@email.com', 23, NULL, '2025-05-08 14:35:17', 'student', 0, 0, 0, 0),
-(2, 999999, 'CSS', 'Admin', NULL, NULL, NULL, 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin@uc.edu.ph', NULL, 30, NULL, '2025-05-08 14:36:00', 'admin', 0, 0, 0, 0),
-(3, 11111111, 'Sagaral', 'Alexus', 'Ranido', 'BSIT', 3, 'alex123', '$2y$10$8TdYXm5.Rrz77MYeGGGZP.OjFnhtm6MfaQsdrYFhmXDWiPyQ9zqT.', 'axie@gmail.com', 'Gudalupe', 28, NULL, '2025-05-08 19:41:40', 'student', 0, 0, 0, 0);
-
---
--- Table structure for table `points`
---
-
-CREATE TABLE `points` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `student_id` int(11) NOT NULL,
-  `points_earned` int(11) NOT NULL,
-  `points_reason` text NOT NULL,
-  `awarded_by` varchar(50) NOT NULL,
-  `awarded_date` timestamp NOT NULL DEFAULT current_timestamp(),
-  `converted_to_session` tinyint(1) DEFAULT 0,
-  PRIMARY KEY (`id`),
-  KEY `student_id` (`student_id`),
-  CONSTRAINT `points_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `users` (`ID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
-CREATE TABLE `lab_schedules` (
-  `schedule_id` int(11) NOT NULL AUTO_INCREMENT,
-  `lab_room` varchar(10) NOT NULL,
-  `title` varchar(255) NOT NULL,
-  `description` text,
-  `schedule_image` varchar(255) NOT NULL,
-  `uploaded_by` varchar(100) NOT NULL,
-  `upload_date` timestamp NOT NULL DEFAULT current_timestamp,
-  PRIMARY KEY (`schedule_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `resources`
---
-
-CREATE TABLE `resources` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `title` varchar(255) NOT NULL,
-  `description` text,
-  `file_path` varchar(255) NOT NULL,
-  `uploaded_by` varchar(50) NOT NULL,
-  `upload_date` timestamp NOT NULL DEFAULT current_timestamp,
-  `category` varchar(50) DEFAULT NULL,
-  `status` enum('active','inactive') DEFAULT 'active',
-  PRIMARY KEY (`id`),
-  KEY `uploaded_by` (`uploaded_by`),
-  CONSTRAINT `resources_ibfk_1` FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`USERNAME`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+(1, 22683320, 'Monreal', 'Jeff ', 'Ranido', 'BSIT', 3, 'j123', '$2y$10$nBxx8z1OXvFdLpUmzK8bl...HWuPZAOn33Au8sYjkG9PM4FqXY5le', 'jeff@gmail.com', 'Cebu City', 9, NULL, '2025-05-15 03:33:53', 'student', 0, 3, 12, 3),
+(2, 11111111, 'Sagaral', 'Alexus', '', 'BSIT', 3, 'alex123', '$2y$10$R8LUTMfnppkVlbtnX438sOjWyg0Qr2ijW1pwu6VFcHln..4CkBok.', 'alex@gmail.com', 'Cebu City', 15, NULL, '2025-05-15 03:34:37', 'student', 0, 4, 4, 0),
+(3, 222222222, 'Catubig', 'Mark', '', 'BSIT', 3, 'mark123', '$2y$10$HDVDfCzPpyNMCGaUfqf/ZOZwMyM9f5/qZyMRZv0ies978wDFdp98K', 'mark@gmail.com', 'Cebu City', 22, NULL, '2025-05-15 03:35:13', 'student', 0, 2, 2, 0),
+(4, 33333333, 'Palacio', 'Real Jhon', '', 'BSIT', 3, 'real123', '$2y$10$beFM5LFnkLBPBcjJPXEDRuWPyYVNule9/.Klt5xhZmIgW8dVf99j6', 'real@gmail.com', 'Cebu City', 26, NULL, '2025-05-15 03:35:55', 'student', 0, 1, 1, 0),
+(5, 44444444, 'Paraiso', 'Justine', '', 'BSIT', 3, 'just123', '$2y$10$lVHQY7ubKfbWxTfvjSb.FOi01kwy5fq4POMiJuvG/JiQsL1nRNjCm', 'just@gmail.com', 'Cebu City', 26, NULL, '2025-05-15 03:36:27', 'student', 0, 0, 0, 0),
+(6, 55555555, 'Cabunilas', 'Vince', '', 'BSIT', 3, 'vince123', '$2y$10$eB2QC.ZjYT.c8GDNeO.D7OaT6ANNRlID6GoAqx1NFgS3mbOL2IUxm', 'vince@gmail.com', 'Cebu City', 26, NULL, '2025-05-15 03:37:13', 'student', 0, 3, 3, 0),
+(10, 0, 'CSS', 'Admin', NULL, NULL, NULL, 'admin', '$2y$10$UEU1A58wuix.i8aaDVSd7.XjyheTwDnG0DvBTpwLTe.6YAKIFVNNS', 'admin@gmail.com', NULL, 30, NULL, '2025-05-15 04:15:08', 'admin', 0, 0, 0, 0);
 
 --
 -- Indexes for dumped tables
 --
 
 --
--- Indexes for table `announcements`
+-- Indexes for table `lab_schedules`
 --
-ALTER TABLE `announcements`
+ALTER TABLE `lab_schedules`
+  ADD PRIMARY KEY (`schedule_id`);
+
+--
+-- Indexes for table `notifications`
+--
+ALTER TABLE `notifications`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `admin_username` (`admin_username`);
+  ADD KEY `notifications_user_fk` (`ID_NUMBER`);
 
 --
--- Indexes for table `computers`
+-- Indexes for table `points`
 --
-ALTER TABLE `computers`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `unique_pc_lab` (`pc_number`,`lab_room_id`);
-
---
--- Indexes for table `feedback`
---
-ALTER TABLE `feedback`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `session_id` (`session_id`),
-  ADD KEY `user_id` (`user_id`);
-
---
--- Indexes for table `lab_rooms`
---
-ALTER TABLE `lab_rooms`
-  ADD PRIMARY KEY (`id`);
-
---
--- Indexes for table `reservations`
---
-ALTER TABLE `reservations`
+ALTER TABLE `points`
   ADD PRIMARY KEY (`id`),
   ADD KEY `student_id` (`student_id`);
+
+--
+-- Indexes for table `resources`
+--
+ALTER TABLE `resources`
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `sit_in_sessions`
 --
 ALTER TABLE `sit_in_sessions`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `student_id` (`student_id`);
+  ADD KEY `idx_reservation_id` (`reservation_id`);
 
 --
 -- Indexes for table `users`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`ID`),
-  ADD UNIQUE KEY `ID_NUMBER` (`ID_NUMBER`),
-  ADD UNIQUE KEY `USERNAME` (`USERNAME`),
-  ADD UNIQUE KEY `EMAIL` (`EMAIL`);
+  ADD UNIQUE KEY `unique_id_number` (`ID_NUMBER`);
 
 --
 -- AUTO_INCREMENT for dumped tables
 --
 
 --
--- AUTO_INCREMENT for table `announcements`
+-- AUTO_INCREMENT for table `lab_schedules`
 --
-ALTER TABLE `announcements`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+ALTER TABLE `lab_schedules`
+  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
--- AUTO_INCREMENT for table `computers`
+-- AUTO_INCREMENT for table `notifications`
 --
-ALTER TABLE `computers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=512;
+ALTER TABLE `notifications`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
--- AUTO_INCREMENT for table `feedback`
+-- AUTO_INCREMENT for table `points`
 --
-ALTER TABLE `feedback`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+ALTER TABLE `points`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
--- AUTO_INCREMENT for table `lab_rooms`
+-- AUTO_INCREMENT for table `resources`
 --
-ALTER TABLE `lab_rooms`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
-
---
--- AUTO_INCREMENT for table `reservations`
---
-ALTER TABLE `reservations`
+ALTER TABLE `resources`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
-
---
--- AUTO_INCREMENT for table `sit_in_sessions`
---
-ALTER TABLE `sit_in_sessions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- Constraints for dumped tables
 --
 
 --
--- Constraints for table `announcements`
+-- Constraints for table `notifications`
 --
-ALTER TABLE `announcements`
-  ADD CONSTRAINT `announcements_ibfk_1` FOREIGN KEY (`admin_username`) REFERENCES `users` (`USERNAME`);
+ALTER TABLE `notifications`
+  ADD CONSTRAINT `notifications_user_fk` FOREIGN KEY (`ID_NUMBER`) REFERENCES `users` (`ID_NUMBER`) ON DELETE CASCADE;
 
 --
--- Constraints for table `feedback`
+-- Constraints for table `points`
 --
-ALTER TABLE `feedback`
-  ADD CONSTRAINT `feedback_ibfk_1` FOREIGN KEY (`session_id`) REFERENCES `sit_in_sessions` (`id`),
-  ADD CONSTRAINT `feedback_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`ID`);
-
---
--- Constraints for table `reservations`
---
-ALTER TABLE `reservations`
-  ADD CONSTRAINT `reservations_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `users` (`ID_NUMBER`);
-
---
--- Constraints for table `sit_in_sessions`
---
-ALTER TABLE `sit_in_sessions`
-  ADD CONSTRAINT `sit_in_sessions_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `users` (`ID_NUMBER`);
+ALTER TABLE `points`
+  ADD CONSTRAINT `points_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `users` (`ID`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
